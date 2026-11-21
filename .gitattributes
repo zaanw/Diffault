@@ -1,0 +1,2 @@
+# Count the SQLite schema maintained as part of the reporting code.
+reports/history.sql linguist-detectable=true
