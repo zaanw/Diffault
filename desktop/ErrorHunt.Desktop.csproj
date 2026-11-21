@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../reports/ErrorHunt.Reports.csproj" />
+    <None Include="$(EngineExecutable)" Link="errorhunt-engine.exe"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+          Condition="'$(EngineExecutable)' != ''" />
+  </ItemGroup>
+  <Target Name="RequireEngineForPublish" BeforeTargets="Publish" Condition="!Exists('$(EngineExecutable)')">
+    <Error Text="Publish requires -p:EngineExecutable=path/to/errorhunt-engine.exe" />
+  </Target>
+</Project>

@@ -1,10 +1,17 @@
 """Command-line interface for ErrorHunt."""
 from __future__ import annotations
 import argparse
+import codecs
 import json
 from dataclasses import asdict
 from pathlib import Path
 from .core import compare_logs, json_report, parse_log
+
+def read_log(path: Path) -> str:
+    raw = path.read_bytes()
+    encoding = "utf-16" if raw.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)) else "utf-8-sig"
+    return raw.decode(encoding, errors="replace")
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="errorhunt", description="Parse and compare build errors")
@@ -19,11 +26,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "scan":
-            items = parse_log(args.log.read_text(encoding="utf-8-sig", errors="replace"))
+            items = parse_log(read_log(args.log))
             print(json_report(items) if args.json else "\n".join(f"{d.language} {d.severity} {d.file or '<no file>'}:{d.line or '-'} {d.message}" for d in items))
             return 0
-        before = parse_log(args.before.read_text(encoding="utf-8-sig", errors="replace"))
-        after = parse_log(args.after.read_text(encoding="utf-8-sig", errors="replace"))
+        before = parse_log(read_log(args.before))
+        after = parse_log(read_log(args.after))
         changes = compare_logs(before, after)
         if args.json:
             print(json.dumps({k: [asdict(d) for d in v] for k, v in changes.items()}, indent=2, ensure_ascii=False))

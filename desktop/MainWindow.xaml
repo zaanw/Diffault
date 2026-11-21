@@ -1,0 +1,134 @@
+<Window x:Class="ErrorHunt.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="ErrorHunt" Width="1150" Height="740" MinWidth="820" MinHeight="540"
+    Background="#101318" Foreground="#E8EDF4" FontFamily="Segoe UI" FontSize="14"
+    AllowDrop="True" Drop="DropLogs">
+  <Window.Resources>
+    <Style TargetType="Button">
+      <Setter Property="Foreground" Value="#F0F5FA"/>
+      <Setter Property="Background" Value="#283548"/>
+      <Setter Property="Padding" Value="12,7"/>
+      <Setter Property="Margin" Value="0,0,8,8"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Surface" CornerRadius="6" Background="{TemplateBinding Background}"
+                    Padding="{TemplateBinding Padding}" BorderBrush="#455673" BorderThickness="1">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="#384E6C"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.45"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="DataGrid">
+      <Setter Property="Background" Value="#181E27"/>
+      <Setter Property="Foreground" Value="#E8EDF4"/>
+      <Setter Property="RowBackground" Value="#1A222E"/>
+      <Setter Property="AlternatingRowBackground" Value="#222D3B"/>
+      <Setter Property="AutoGenerateColumns" Value="False"/>
+      <Setter Property="IsReadOnly" Value="True"/>
+      <Setter Property="HeadersVisibility" Value="Column"/>
+      <Setter Property="GridLinesVisibility" Value="None"/>
+      <Setter Property="CanUserAddRows" Value="False"/>
+    </Style>
+    <Style TargetType="DataGridColumnHeader">
+      <Setter Property="Background" Value="#303D51"/>
+      <Setter Property="Foreground" Value="#FFFFFF"/>
+      <Setter Property="Padding" Value="8"/>
+    </Style>
+  </Window.Resources>
+  <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Border Background="#1A202B" Padding="16">
+      <StackPanel>
+        <TextBlock Text="ErrorHunt" FontWeight="Bold" FontSize="22" Margin="0,5,0,24"/>
+        <Button Content="Dashboard" Click="ShowDashboard"/>
+        <Button Content="Analyze" Click="ShowAnalyze"/>
+        <Button Content="Compare" Click="ShowCompare"/>
+        <Button Content="History" Click="ShowHistory"/>
+        <Button Content="Settings" Click="ShowSettings"/>
+      </StackPanel>
+    </Border>
+    <Grid x:Name="Workspace" Grid.Column="1" Margin="22">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+      <TextBlock x:Name="TitleText" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,12"/>
+      <StackPanel x:Name="Controls" Grid.Row="1">
+        <WrapPanel x:Name="AnalyzeActions">
+          <Button Content="Open log" Click="OpenLog"/>
+          <Button Content="Analyze clipboard" Click="AnalyzeClipboard"/>
+        </WrapPanel>
+        <WrapPanel x:Name="CompareActions">
+          <Button Content="Open Before" Click="PickBefore"/>
+          <Button Content="Open After" Click="PickAfter"/>
+          <Button x:Name="RunCompare" Content="Compare logs" Click="CompareLogs" IsEnabled="False"/>
+          <Button Content="Compare diagnostic JSON" Click="CompareJson"/>
+          <TextBlock x:Name="FileNames" TextWrapping="Wrap" Margin="0,8,0,8"/>
+        </WrapPanel>
+        <WrapPanel x:Name="ReportActions">
+          <Button Content="Fixed" Click="ShowFixed"/>
+          <Button Content="New" Click="ShowNew"/>
+          <Button Content="Existing" Click="ShowExisting"/>
+          <Button x:Name="OpenSourceButton" Content="Open source" Click="OpenSource" IsEnabled="False"/>
+          <Button Content="Export preferred format" Click="ExportPreferred"/>
+          <Button Content="Export JSON" Click="ExportJson"/>
+          <Button Content="Export SARIF" Click="ExportSarif"/>
+        </WrapPanel>
+        <TextBox x:Name="Search" Background="#181E27" Foreground="#E8EDF4"
+                 AutomationProperties.Name="Filter by file, code or message" TextChanged="SearchChanged"
+                 ToolTip="Filter by file, code or message" Margin="0,0,0,8"/>
+        <StackPanel x:Name="SettingsActions">
+          <CheckBox x:Name="SaveHistory" Content="Save analyses to local history" Foreground="#E8EDF4"
+                    Margin="0,0,0,12"/>
+          <CheckBox x:Name="PreferSarif" Content="Use SARIF for the quick export button"
+                    Foreground="#E8EDF4" Margin="0,0,0,12"/>
+          <WrapPanel>
+            <Button Content="Choose project folder" Click="ChooseProject"/>
+            <TextBlock x:Name="ProjectPath" Margin="0,6,0,8" TextWrapping="Wrap"/>
+          </WrapPanel>
+          <WrapPanel>
+            <Button Content="Choose editor" Click="ChooseEditor"/>
+            <Button Content="Use Notepad" Click="ResetEditor"/>
+            <TextBlock x:Name="EditorPath" Margin="0,6,0,8" TextWrapping="Wrap"/>
+          </WrapPanel>
+          <Button Content="Save settings" HorizontalAlignment="Left" Click="SaveSettings"/>
+        </StackPanel>
+        <TextBlock x:Name="Summary" Margin="0,0,0,12" TextWrapping="Wrap"/>
+      </StackPanel>
+      <DataGrid Grid.Row="2" x:Name="Results" SelectionChanged="SelectDiagnostic">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="82"/>
+          <DataGridTextColumn Header="Language" Binding="{Binding Language}" Width="90"/>
+          <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="75"/>
+          <DataGridTextColumn Header="File" Binding="{Binding File}" Width="2*"/>
+          <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="48"/>
+          <DataGridTextColumn Header="Column" Binding="{Binding Column}" Width="64"/>
+          <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="55"/>
+          <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="3*"/>
+        </DataGrid.Columns>
+      </DataGrid>
+      <ListBox Grid.Row="2" x:Name="HistoryList" Background="#181E27" Foreground="#E8EDF4"
+               MouseDoubleClick="OpenHistory" KeyDown="OpenHistoryWithKeyboard">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Margin="8,4">
+              <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding Date}"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <TextBox Grid.Row="3" x:Name="Original" IsReadOnly="True" TextWrapping="Wrap"
+               Background="#181E27" Foreground="#E8EDF4" MaxHeight="130"
+               VerticalScrollBarVisibility="Auto" Margin="0,8,0,0"/>
+      <TextBlock Grid.Row="4" x:Name="Status" Foreground="#B7CAE3" Margin="0,8,0,0" TextWrapping="Wrap"/>
+    </Grid>
+  </Grid>
+</Window>
