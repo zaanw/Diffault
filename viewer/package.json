@@ -1,0 +1,11 @@
+{
+  "name": "errorhunt-report-viewer",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test viewer.test.cjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

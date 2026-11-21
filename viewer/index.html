@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'">
+<title>ErrorHunt report viewer</title>
+<link rel="stylesheet" href="viewer.css">
+<main>
+  <h1>ErrorHunt report viewer</h1>
+  <label>Open a JSON report <input id="file" type="file" accept=".json,application/json"></label>
+  <p id="status" role="status"></p>
+  <section id="report" hidden>
+    <div class="filters">
+      <label>Group <select id="group">
+        <option value="all">All</option>
+        <option value="fixed">Fixed</option>
+        <option value="new">New</option>
+        <option value="existing">Existing</option>
+      </select></label>
+      <label>Search <input id="query" type="search" placeholder="File, code or message"></label>
+    </div>
+    <table>
+      <thead><tr><th>Group</th><th>Severity</th><th>Language</th><th>Source</th><th>Message</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <button id="more" hidden>Show more</button>
+  </section>
+</main>
+<script src="dist/viewer.js" defer></script>
+</html>

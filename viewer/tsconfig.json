@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "none",
+    "strict": true,
+    "outFile": "dist/viewer.js"
+  },
+  "files": ["viewer.ts"]
+}
