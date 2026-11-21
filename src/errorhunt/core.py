@@ -17,7 +17,10 @@ class Diagnostic:
     code: str | None = None
 
     def identity(self) -> tuple[str, str, str, str, str]:
-        return (self.language, self.severity, self.file or "", self.code or "", self.message)
+        file = (self.file or "").replace("\\", "/").removeprefix("./")
+        if file.startswith("//") or re.match(r"^[a-z]:", file, re.I):
+            file = file.casefold()
+        return (self.language, self.severity, file, (self.code or "").upper(), " ".join(self.message.split()))
 
 _PATTERNS = [
     ("typescript", re.compile(r"^(?P<file>.+?\.(?:ts|tsx|js|jsx))\((?P<line>\d+),(?P<column>\d+)\):\s*(?P<severity>error|warning)\s+(?P<code>TS\d+):\s*(?P<message>.+)$", re.I)),
@@ -37,14 +40,38 @@ def _language_for_native(filename: str) -> str:
     suffix = Path(filename).suffix.lower()
     return {".c": "c", ".cc": "cpp", ".cpp": "cpp", ".cxx": "cpp", ".h": "c", ".hpp": "cpp", ".swift": "swift", ".rs": "rust"}.get(suffix, "native")
 
+_PYTHON_EXCEPTION = re.compile(r"^[\w.]+(?:Error|Exception|Warning|Exit)(?::.*)?$")
+
+
+def _position(value: str | None) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
 def parse_log(content: str) -> list[Diagnostic]:
     lines = content.splitlines()
     output: list[Diagnostic] = []
+    frame: tuple[str, int | None] | None = None
     for i, text in enumerate(lines):
+        if text.startswith("Traceback (most recent call last):"):
+            frame = None
+            continue
+        if frame and text and not text[0].isspace():
+            if _PYTHON_EXCEPTION.fullmatch(text):
+                output.append(Diagnostic("python", "error", text, *frame))
+                frame = None
+                continue
+            frame = None
         for name, pattern in _PATTERNS:
             match = pattern.match(text.strip())
             if match is None:
                 continue
+            if frame and text[:1].isspace() and name != "python":
+                break
             parts = match.groupdict()
             language = _language_for_native(parts.get("file") or "") if name == "native" else name
             message = (parts.get("message") or "").strip()
@@ -52,18 +79,17 @@ def parse_log(content: str) -> list[Diagnostic]:
             if severity in {"fatal error", "parse error"}:
                 severity = "error"
             file = parts.get("file")
-            line = int(parts["line"]) if parts.get("line") else None
-            column = int(parts["column"]) if parts.get("column") else None
+            line = _position(parts.get("line"))
+            column = _position(parts.get("column"))
             code = parts.get("code")
             if name == "python":
-                exception = next((s.strip() for s in lines[i + 1:i + 5] if re.match(r"^[\w.]+(?:Error|Exception|Warning|Exit):", s.strip())), None)
-                if exception is None:
-                    continue
-                message = exception
+                if file is not None:
+                    frame = file, line
+                break
             elif name == "rust" and file is None:
                 location = next((re.search(r"-->\s+(.+?):(\d+):(\d+)", s) for s in lines[i + 1:i + 5] if "-->" in s), None)
                 if location:
-                    file, line, column = location.group(1), int(location.group(2)), int(location.group(3))
+                    file, line, column = location.group(1), _position(location.group(2)), _position(location.group(3))
             output.append(Diagnostic(language, severity, message, file, line, column, code))
             break
     return list(dict.fromkeys(output))

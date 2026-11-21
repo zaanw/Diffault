@@ -25,3 +25,30 @@ def test_compare_tolerates_moved_lines():
 def test_duplicate_log_lines():
     items = parse_log("a.go:1:1: undefined: x\na.go:1:1: undefined: x")
     assert len(items) == 1
+
+
+def test_traceback_uses_innermost_frame():
+    items = parse_log(
+        'Traceback (most recent call last):\n'
+        '  File "outer.py", line 2\n'
+        '    import inner\n'
+        '  File "inner.py", line 9\n'
+        '    raise ValueError("x")\n'
+        'ValueError: x'
+    )
+    assert [(item.file, item.line, item.message) for item in items] == [
+        ("inner.py", 9, "ValueError: x")
+    ]
+
+
+def test_cli_utf16_windows_path(tmp_path, capsys):
+    import json
+
+    from errorhunt.cli import main
+
+    log = tmp_path / "build.log"
+    log.write_text(r"C:\Projet\雪.go:4:9: undefined: café", encoding="utf-16")
+    assert main(["scan", str(log), "--json"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result[0]["file"] == r"C:\Projet\雪.go"
+    assert result[0]["message"] == "undefined: café"
