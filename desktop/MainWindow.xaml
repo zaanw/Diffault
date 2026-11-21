@@ -76,6 +76,7 @@
           <Button Content="Fixed" Click="ShowFixed"/>
           <Button Content="New" Click="ShowNew"/>
           <Button Content="Existing" Click="ShowExisting"/>
+          <Button x:Name="MoreFrequentButton" Content="More frequent" Click="ShowMoreFrequent"/>
           <Button x:Name="OpenSourceButton" Content="Open source" Click="OpenSource" IsEnabled="False"/>
           <Button Content="Export preferred format" Click="ExportPreferred"/>
           <Button Content="Export JSON" Click="ExportJson"/>
@@ -110,6 +111,7 @@
           <DataGridTextColumn Header="File" Binding="{Binding File}" Width="2*"/>
           <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="48"/>
           <DataGridTextColumn Header="Column" Binding="{Binding Column}" Width="64"/>
+          <DataGridTextColumn x:Name="BeforeCountColumn" Header="Before" Binding="{Binding PreviousCount}" Width="62"/>
           <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="55"/>
           <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="3*"/>
         </DataGrid.Columns>

@@ -22,6 +22,8 @@ pub struct Diagnostic {
     pub message: String,
     pub original: String,
     pub count: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_count: Option<usize>,
 }
 
 static PATTERNS: LazyLock<Vec<(&str, Regex)>> = LazyLock::new(|| {
@@ -108,12 +110,12 @@ impl Groups {
         }
     }
 
-    fn from_items(items: Vec<Diagnostic>) -> Vec<Diagnostic> {
+    fn from_items(items: Vec<Diagnostic>) -> Self {
         let mut groups = Self::default();
         for item in items {
             groups.add(item);
         }
-        groups.diagnostics
+        groups
     }
 }
 
@@ -143,6 +145,7 @@ pub fn parse(content: &str) -> Vec<Diagnostic> {
                     message: line.into(),
                     original: format!("{frame}\n{original}"),
                     count: 1,
+                    previous_count: None,
                 });
                 continue;
             }
@@ -199,6 +202,7 @@ pub fn parse(content: &str) -> Vec<Diagnostic> {
                 message: get("message").unwrap().trim().into(),
                 original: source,
                 count: 1,
+                previous_count: None,
             });
             break;
         }
@@ -216,15 +220,25 @@ pub struct Comparison {
 pub fn compare(before: Vec<Diagnostic>, after: Vec<Diagnostic>) -> Comparison {
     let before = Groups::from_items(before);
     let after = Groups::from_items(after);
-    use std::collections::HashSet;
-    let previous: HashSet<_> = before.iter().map(identity).collect();
-    let current: HashSet<_> = after.iter().map(identity).collect();
     let (existing, new) = after
+        .diagnostics
         .into_iter()
-        .partition(|item| previous.contains(&identity(item)));
+        .map(|mut item| {
+            item.previous_count = before
+                .positions
+                .get(&identity(&item))
+                .map(|&index| before.diagnostics[index].count);
+            item
+        })
+        .partition(|item| item.previous_count.is_some());
     let fixed = before
+        .diagnostics
         .into_iter()
-        .filter(|item| !current.contains(&identity(item)))
+        .filter(|item| !after.positions.contains_key(&identity(item)))
+        .map(|mut item| {
+            item.previous_count = None;
+            item
+        })
         .collect();
     Comparison {
         fixed,

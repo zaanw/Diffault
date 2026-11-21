@@ -1,10 +1,13 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 
 namespace ErrorHunt;
 
 public sealed record Diagnostic(string Language, string Severity, string? File, int? Line,
-    int? Column, string? Code, string Message, string Original, int Count);
+    int? Column, string? Code, string Message, string Original, int Count,
+    [property: JsonPropertyName("previous_count"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? PreviousCount = null);
 
 public sealed record Report(Diagnostic[] Fixed, Diagnostic[] New, Diagnostic[] Existing)
 {
@@ -20,12 +23,20 @@ public sealed record Report(Diagnostic[] Fixed, Diagnostic[] New, Diagnostic[] E
         var results = new[] { (Fixed, "absent"), (New, "new"), (Existing, "unchanged") }
             .SelectMany(group => group.Item1.Select(item =>
             {
+                var properties = new Dictionary<string, object>
+                {
+                    ["language"] = item.Language,
+                    ["original"] = item.Original,
+                    ["count"] = item.Count
+                };
+                if (item.PreviousCount is { } previousCount)
+                    properties["previous_count"] = previousCount;
                 var result = new Dictionary<string, object>
                 {
                     ["level"] = item.Severity switch { "error" => "error", "warning" => "warning", _ => "note" },
                     ["message"] = new { text = item.Message },
                     ["baselineState"] = group.Item2,
-                    ["properties"] = new { item.Language, item.Original, item.Count }
+                    ["properties"] = properties
                 };
                 if (item.Code is { Length: > 0 } code)
                     result["ruleId"] = code;

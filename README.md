@@ -12,7 +12,7 @@ The Windows x64 build contains the WPF application, Rust engine, .NET runtime an
 
 The engine supports common formats for C, C++, C#, Go, Java, Lua, PHP, Python, Rust, SQL, Swift and TypeScript. Log files can be UTF-8 (with or without BOM) or BOM-marked UTF-16. Invalid byte sequences are replaced. The engine accepts files up to 64 MiB per log and displays positions only when captured from the log.
 
-Duplicates are grouped by language, severity, normalized path, code and message whitespace. The report shows a count and retains the first displayed source location for each group. Comparisons ignore changes to line and column. A file rename or wording change can appear as **Fixed** plus **New** because the engine cannot establish that they refer to the same diagnostic. Standalone scans use the **New** group so scans and comparisons share an export format.
+Duplicates are grouped by language, severity, normalized path, code and message whitespace. The report shows a count and retains the first displayed source location for each group. **Existing** also shows the count from the earlier log. Select **More frequent** to find issues that appeared more times in the second build. The offline viewer offers the same filter and displays counts as `before → after`. Comparisons ignore changes to line and column. A file rename or wording change can appear as **Fixed** plus **New** because the engine cannot establish that they refer to the same diagnostic. Standalone scans use the **New** group so scans and comparisons share an export format.
 
 ## Build the Windows x64 app
 
@@ -64,7 +64,7 @@ WPF and the Go CLI pass arguments to the Rust engine without a shell. The engine
 | `compare-reports BEFORE_JSON AFTER_JSON` | The same comparison object, using diagnostic arrays produced by adapters or previous scans |
 | `stdin` | Accepts a JSON object with `before` log text and optional `after` log text. Returns the same shape as scan or compare. |
 
-Each diagnostic contains `language`, `severity`, `file`, `line`, `column`, `code`, `message`, `original` and `count`. Unavailable location fields and codes are null. The Rust engine calls the C encoding detector and the C++ Windows path classifier through a narrow C ABI. The WPF reporting library uses `reports/history.sql` to initialize its SQLite database.
+Each diagnostic contains `language`, `severity`, `file`, `line`, `column`, `code`, `message`, `original` and `count`. Existing diagnostics from a comparison also include `previous_count` in JSON and in the SARIF result properties. Older reports may omit the earlier count. Unavailable location fields and codes are null. The Rust engine calls the C encoding detector and the C++ Windows path classifier through a narrow C ABI. The WPF reporting library uses `reports/history.sql` to initialize its SQLite database.
 
 ## Optional adapters and filtering
 

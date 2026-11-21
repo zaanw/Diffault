@@ -39,8 +39,8 @@ jobs:
         run: |
           $before = Join-Path $env:RUNNER_TEMP 'errorhunt-before.log'
           $after = Join-Path $env:RUNNER_TEMP 'errorhunt-after.log'
-          @('Main.cs(1,2): error CS0103: missing', 'old.go:2: undefined: old') | Set-Content -Encoding utf8 $before
-          @('Main.cs(7,5): error CS0103: missing', 'new.go:2: undefined: new') | Set-Content -Encoding utf8 $after
+          @('Main.cs(1,2): error CS0103: missing', 'stable.go:2: undefined: stable', 'old.go:2: undefined: old') | Set-Content -Encoding utf8 $before
+          @('Main.cs(7,5): error CS0103: missing', 'Main.cs(8,5): error CS0103: missing', 'stable.go:4: undefined: stable', 'new.go:2: undefined: new') | Set-Content -Encoding utf8 $after
           $stderr = Join-Path $env:RUNNER_TEMP 'errorhunt-wpf-stderr.log'
           $process = Start-Process artifacts/win-x64/ErrorHunt.Desktop.exe -ArgumentList @('--smoke-test', ('"' + $before + '"'), ('"' + $after + '"')) -PassThru
           if (!$process.WaitForExit(30000)) {

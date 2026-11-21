@@ -18,9 +18,10 @@
         <option value="existing">Existing</option>
       </select></label>
       <label>Search <input id="query" type="search" placeholder="File, code or message"></label>
+      <label><input id="frequency" type="checkbox"> More frequent only</label>
     </div>
     <table>
-      <thead><tr><th>Group</th><th>Severity</th><th>Language</th><th>Source</th><th>Message</th></tr></thead>
+      <thead><tr><th>Group</th><th>Severity</th><th>Language</th><th>Source</th><th>Occurrences</th><th>Message</th></tr></thead>
       <tbody id="rows"></tbody>
     </table>
     <button id="more" hidden>Show more</button>
