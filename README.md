@@ -51,7 +51,7 @@ go run . -engine ../engine/target/debug/errorhunt-engine -jobs 4 first.log secon
 ERRORHUNT_TEST_ENGINE="$(cd ../engine/target/debug && pwd)/errorhunt-engine" go test -v ./...
 ```
 
-For the browser viewer, run `npm ci` and `npm test` from `viewer/`. Open `viewer/index.html` in a browser and choose an exported comparison JSON file. The viewer filters and paginates locally using that file. It also accepts the JSON output of `errorhunt-engine compare BEFORE AFTER`.
+For the browser viewer, run `npm ci` and `npm test` from `viewer/`. Open the generated standalone `viewer/dist/index.html` in a browser and choose an exported comparison JSON file. The viewer filters and paginates locally using that file. It also accepts the JSON output of `errorhunt-engine compare BEFORE AFTER`.
 
 ## Component protocol
 

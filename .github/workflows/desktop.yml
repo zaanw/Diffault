@@ -34,6 +34,23 @@ jobs:
             throw "Missing executable in the Windows build."
           }
           dotnet run --no-build --no-restore --project checks/ErrorHunt.Checks.csproj -- artifacts/win-x64/errorhunt-engine.exe
+      - name: Smoke test the packaged WPF application
+        shell: pwsh
+        run: |
+          $before = Join-Path $env:RUNNER_TEMP 'errorhunt-before.log'
+          $after = Join-Path $env:RUNNER_TEMP 'errorhunt-after.log'
+          @('Main.cs(1,2): error CS0103: missing', 'old.go:2: undefined: old') | Set-Content -Encoding utf8 $before
+          @('Main.cs(7,5): error CS0103: missing', 'new.go:2: undefined: new') | Set-Content -Encoding utf8 $after
+          $stderr = Join-Path $env:RUNNER_TEMP 'errorhunt-wpf-stderr.log'
+          $process = Start-Process artifacts/win-x64/ErrorHunt.Desktop.exe -ArgumentList @('--smoke-test', ('"' + $before + '"'), ('"' + $after + '"')) -PassThru
+          if (!$process.WaitForExit(30000)) {
+            $process.Kill()
+            throw "The WPF smoke test timed out."
+          }
+          if ($process.ExitCode -ne 0) {
+            Get-Content $stderr
+            throw "The WPF smoke test failed with exit code $($process.ExitCode)."
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: ErrorHunt-win-x64
@@ -65,6 +82,11 @@ jobs:
         run: |
           npm ci
           npm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ErrorHunt-report-viewer
+          path: viewer/dist/index.html
+          if-no-files-found: error
 
   adapters:
     runs-on: ubuntu-latest

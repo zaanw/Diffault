@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using Microsoft.Win32;
 
 namespace ErrorHunt;
@@ -55,6 +56,11 @@ public partial class MainWindow : Window
         HistoryList.Visibility = Visible(destination == "History");
         SettingsActions.Visibility = Visible(destination == "Settings");
         ShowReport();
+        if (SystemParameters.ClientAreaAnimation && IsLoaded)
+        {
+            var animation = new DoubleAnimation(0.88, 1, TimeSpan.FromMilliseconds(140));
+            Workspace.BeginAnimation(OpacityProperty, animation);
+        }
     }
 
     private static Visibility Visible(bool visible) => visible ? Visibility.Visible : Visibility.Collapsed;
@@ -277,6 +283,22 @@ public partial class MainWindow : Window
             busy = false;
             Controls.IsEnabled = true;
         }
+    }
+
+    internal async Task VerifyCompare(string before, string after)
+    {
+        preferences = preferences with { KeepHistory = false };
+        Navigate("Compare");
+        (beforePath, afterPath) = (before, after);
+        ShowFiles();
+        if (!RunCompare.IsEnabled) throw new InvalidOperationException("Compare is unavailable.");
+        await Run("compare", [before, after], "Smoke test");
+        if (report is not { Fixed.Length: 1, New.Length: 1, Existing.Length: 1 } result ||
+            Results.ItemsSource != result.New)
+            throw new InvalidOperationException($"The comparison did not populate all groups. {Status.Text}");
+        Display(result.Existing);
+        if (Results.ItemsSource != result.Existing || result.Existing[0].Line != 7)
+            throw new InvalidOperationException("Existing diagnostics were not shown at their new location.");
     }
 
     private static async Task<Report> RunEngine(string command, string[] files, string? text)
