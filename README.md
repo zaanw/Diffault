@@ -4,12 +4,14 @@ Diffault reads compiler and runtime logs locally. Compare two builds to identify
 
 ## Windows desktop
 
-The Windows x64 build contains the WPF application, Rust engine, .NET runtime and SQLite. Extract the entire `Diffault-win-x64` archive into one directory and run `Diffault.exe`. The program runs offline and does not require Python or build tools.
+The Windows x64 build contains the WPF application, Rust engine, .NET runtime and SQLite. Download `Diffault-win-x64.zip` from the [Diffault Desktop workflow](https://github.com/zaanw/Diffault/actions/workflows/desktop.yml), choose **Extract All**, then run `Diffault.exe` inside the extracted `Diffault` folder. Keep its companion files together. The package works offline on supported Windows x64 systems with normal user permissions.
 
 - **Dashboard** opens logs, resumes the latest comparison, and shows recent results from local history.
 - In **Compare**, select or drop logs in **Before** and **After**, then click **Compare logs**. You can also drop two logs on the window and confirm their order. Select the **Fixed**, **New**, **Existing**, or **More frequent** card to inspect each group.
 - In **Analyze**, browse for a log, drop it, or select **Paste from clipboard**. Search by file, code or message and filter by severity, language or file. Select a diagnostic to open its original log text in the details panel.
 - Export the current report to **JSON** or **SARIF**. Open saved reports from **History**. Settings lets you disable saving future analyses and choose the preferred export format. Choose a local project folder and an editor in **Settings** to enable **Open source** from a selected diagnostic. Existing history stays in `%LOCALAPPDATA%\ErrorHunt\history.db`.
+
+In **Settings → Appearance**, choose **System**, **Light**, or **Dark**, then save. **System** follows the Windows app appearance setting. **Settings → Diagnostics** opens or exports local startup and error codes. The log at `%LOCALAPPDATA%\ErrorHunt\diagnostics.log` omits filenames, raw messages, stack traces, and log contents. If the .NET host cannot load at all, there may be no new log entry. Extract the complete archive again and keep all of its files in the same folder.
 
 The engine supports common formats for C, C++, C#, Go, Java, Lua, PHP, Python, Rust, SQL, Swift and TypeScript. Log files can be UTF-8 (with or without BOM) or BOM-marked UTF-16. Invalid byte sequences are replaced. The engine accepts files up to 64 MiB per log and displays positions only when captured from the log.
 
@@ -29,7 +31,7 @@ dotnet publish desktop/ErrorHunt.Desktop.csproj -c Release -r win-x64 --self-con
 .\artifacts\win-x64\Diffault.exe
 ```
 
-The Diffault Desktop workflow performs the build and uploads the self-contained application directory as an Actions artifact. The integration check runs the supplied engine against Unicode logs, verifies the three categories, checks JSON and SARIF output and reopens the saved report from SQLite.
+The Diffault Desktop workflow builds a self-contained ZIP, compares every extracted file with the staged package, launches the extracted executable from a separate working directory, and runs the WPF smoke tests against that same package. The integration check runs the supplied engine against Unicode logs, verifies the three categories, checks JSON and SARIF output and reopens the saved report from SQLite.
 
 ## Python compatibility CLI
 

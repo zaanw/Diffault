@@ -1,0 +1,19 @@
+<Window x:Class="ErrorHunt.DiagnosticLogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Diffault diagnostic log" Width="690" Height="410" MinWidth="450" MinHeight="300"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        FontFamily="{StaticResource WorkspaceFont}" Background="{DynamicResource CanvasBrush}"
+        Foreground="{DynamicResource TextBrush}">
+    <Grid Margin="18">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,10">
+            <TextBlock Text="Diagnostic log" FontSize="21" FontWeight="SemiBold"/>
+            <TextBlock Text="Timestamps, operation names and error codes" Style="{StaticResource Muted}"/>
+        </StackPanel>
+        <TextBox x:Name="LogText" Grid.Row="1" IsReadOnly="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" FontFamily="{StaticResource CodeFont}"
+                 AutomationProperties.Name="Diagnostic log entries"/>
+        <Button Grid.Row="2" IsCancel="True" Content="Close" HorizontalAlignment="Right" Margin="0,10,0,0"/>
+    </Grid>
+</Window>

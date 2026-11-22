@@ -20,6 +20,11 @@ public partial class MainWindow
         static void Click(Button button) => button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
         Require(Title == "Diffault" && page == Page.Dashboard && DashboardPage.IsVisible, "Dashboard did not open.");
+        Require(preferences.Theme == Appearance.System && Status.Text.Contains("Defaults are active"),
+            "Startup did not recover from invalid settings.");
+        var startupLog = diagnostics.Read();
+        Require(startupLog.Contains("settings.load") && !startupLog.Contains("invalid-private-smoke-value"),
+            "Startup diagnostics omitted the event or exposed input.");
         await RefreshDashboardAsync();
         Require(DashboardEmpty.IsVisible && DashboardTotal.Text == "—", "A new workspace should show its empty state.");
         await CaptureWorkspaceAsync(screenshots, "01-dashboard-empty");
@@ -92,16 +97,33 @@ public partial class MainWindow
 
         Click(SettingsNav);
         Require(page == Page.Settings && SettingsPage.IsVisible && SaveHistory.IsChecked == true, "Settings navigation failed.");
+        ThemeSelection.SelectedIndex = 1;
+        Require(Shell.Background is SolidColorBrush { Color.R: > 200 }, "Light palette did not render.");
+        await CaptureWorkspaceAsync(screenshots, "05-settings-light");
+        ThemeSelection.SelectedIndex = 2;
+        Require(Shell.Background is SolidColorBrush { Color.R: < 40 }, "Dark palette did not render.");
         SaveHistory.IsChecked = false;
         ExportFormat.SelectedIndex = 1;
         Click(SaveSettingsButton);
-        Require(!preferences.KeepHistory && preferences.Sarif && File.Exists(preferencesPath), "Settings were not saved.");
-        await CaptureWorkspaceAsync(screenshots, "05-settings");
+        Require(preferences is { KeepHistory: false, Sarif: true, Theme: Appearance.Dark } && File.Exists(preferencesPath),
+            "Settings were not saved.");
+        await CaptureWorkspaceAsync(screenshots, "06-settings-dark");
+
+        var reopened = new MainWindow(workingDirectory);
+        try
+        {
+            Require(reopened.preferences is { KeepHistory: false, Sarif: true, Theme: Appearance.Dark },
+                "Saved preferences could not be reloaded.");
+            await reopened.RefreshDashboardAsync();
+            Require(reopened.latestComparison is null && reopened.latestSavedComparison is not null,
+                "Recent comparison was not loaded lazily.");
+        }
+        finally { reopened.Close(); }
 
         Click(DashboardNav);
         Require(page == Page.Dashboard && DashboardTotal.Text == "3" && RecentList.Items.Count == 2 &&
             LatestComparisonButton.IsVisible, "Dashboard did not show real results.");
-        await CaptureWorkspaceAsync(screenshots, "06-dashboard");
+        await CaptureWorkspaceAsync(screenshots, "07-dashboard");
         Click(LatestComparisonButton);
         Require(page == Page.Compare && comparison?.Data.Existing.Length == 2, "Latest comparison did not reopen.");
 
@@ -109,6 +131,16 @@ public partial class MainWindow
         await RunAsync("stdin", [], "Clipboard", AnalysisKind.Analysis, "demo.go:2: undefined: example");
         Require(Results.Items.Count == 1 && Results.Items[0] is DiagnosticRow { Item.File: "demo.go" } &&
             history.List().Length == 2, "Text import failed or ignored the history setting.");
+
+        await AnalyzeFileAsync(Path.Combine(workingDirectory, "missing-private-smoke.log"));
+        Require(Status.Text.Contains("required file is missing") && Results.Items.Count == 1,
+            "Missing input should preserve the last result and report the failure.");
+        var diagnosticsPath = Path.Combine(workingDirectory, "exported-diagnostics.txt");
+        await WriteDiagnosticLogAsync(diagnosticsPath);
+        var exportedLog = await File.ReadAllTextAsync(diagnosticsPath);
+        Require(exportedLog.Contains("analysis.run") && exportedLog.Contains("FileNotFoundException") &&
+            !exportedLog.Contains("missing-private-smoke") && !exportedLog.Contains("undefined: example"),
+            "Exported diagnostics are incomplete or expose input.");
     }
 
     private async Task CaptureWorkspaceAsync(string? outputDirectory, string name)

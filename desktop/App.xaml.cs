@@ -25,6 +25,7 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         var workingDirectory = Directory.CreateTempSubdirectory("diffault-smoke-");
         if (screenshots is not null) Directory.CreateDirectory(screenshots);
+        File.WriteAllText(Path.Combine(workingDirectory.FullName, "settings.json"), "{ invalid-private-smoke-value");
         var window = new MainWindow(workingDirectory.FullName) { Width = 1280, Height = 720 };
         MainWindow = window;
         window.Loaded += async (_, _) =>

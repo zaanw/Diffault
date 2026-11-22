@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
@@ -20,8 +21,9 @@ public partial class MainWindow : Window
     private bool initialized;
     private int historyRevision;
     private int dashboardRevision;
-    private WorkspaceReport? latestReport;
+    private ReportOverview? latestOverview;
     private WorkspaceReport? latestComparison;
+    private HistoryEntry? latestSavedComparison;
 
     public MainWindow() : this(LocalDiagnostics.DataDirectory, LocalDiagnostics.Default) { }
 
@@ -43,6 +45,7 @@ public partial class MainWindow : Window
         };
         Closed += (_, _) =>
         {
+            StopAppearance();
             historyTimer.Stop();
             filterTimer.Stop();
             historyRevision++;
@@ -52,12 +55,15 @@ public partial class MainWindow : Window
         initialized = true;
         Navigate(Page.Dashboard);
         LoadPreferences(dataDirectory);
+        StartAppearance();
         Loaded += async (_, _) => await RefreshDashboardAsync();
     }
 
     private void Navigate(Page destination)
     {
+        var leavingSettings = page == Page.Settings && destination != Page.Settings;
         page = destination;
+        if (leavingSettings) ApplyAppearance(preferences.Theme);
         TitleText.Text = destination.ToString();
         PageSubtitle.Text = destination switch
         {
@@ -109,6 +115,8 @@ public partial class MainWindow : Window
     {
         diagnostics.Record(operation, error);
         Status.Text = message;
+        if (AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
+            UIElementAutomationPeer.CreatePeerForElement(Status)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 
     private static string Active(bool active) => active ? "True" : "False";
@@ -148,29 +156,38 @@ public partial class MainWindow : Window
         public string CountLabel => Entry.DiagnosticCount is { } count ? $"{count:N0} diagnostics" : "—";
     }
 
+    private sealed record ReportOverview(string Label, int Total, int Errors, int Warnings)
+    {
+        public static ReportOverview Summarize(string label, Report report)
+        {
+            var current = report.New.Concat(report.Existing);
+            return new(label, report.New.Length + report.Existing.Length,
+                current.Count(item => item.Severity.Equals("error", StringComparison.OrdinalIgnoreCase)),
+                current.Count(item => item.Severity.Equals("warning", StringComparison.OrdinalIgnoreCase)));
+        }
+    }
+
     private async Task RefreshDashboardAsync()
     {
         var revision = ++dashboardRevision;
-        var needLatest = latestReport is null;
-        var needComparison = latestComparison is null;
+        var needOverview = latestOverview is null;
         try
         {
             var overview = await Task.Run(() =>
             {
                 var recent = history.List(limit: 5);
                 var comparison = history.LatestComparison();
-                var latest = recent.FirstOrDefault();
-                var loadLatest = needLatest && latest is not null;
-                var loadComparison = needComparison && comparison is not null;
-                var restoredLatest = loadLatest ? ReadHistory(latest!) : null;
-                var restoredComparison = loadComparison
-                    ? (comparison == latest ? restoredLatest : null) ?? ReadHistory(comparison!)
-                    : null;
-                return (recent, restoredLatest, restoredComparison);
+                ReportOverview? summary = null;
+                if (needOverview && recent.FirstOrDefault() is { } latest)
+                {
+                    try { summary = ReportOverview.Summarize(latest.Label, history.Load(latest.Id)); }
+                    catch (Exception error) { diagnostics.Record("history.summary", error); }
+                }
+                return (recent, comparison, summary);
             });
             if (revision != dashboardRevision) return;
-            latestReport ??= overview.restoredLatest;
-            latestComparison ??= overview.restoredComparison;
+            latestOverview ??= overview.summary;
+            latestSavedComparison = overview.comparison;
             RecentList.ItemsSource = overview.recent.Select(entry => new SavedReport(entry)).ToArray();
             var hasEntries = overview.recent.Length > 0;
             DashboardEmptyTitle.Text = "No saved reports yet";
@@ -191,12 +208,12 @@ public partial class MainWindow : Window
 
     private void UpdateDashboard()
     {
-        DashboardTotal.Text = latestReport?.Total.ToString("N0") ?? "—";
-        DashboardErrors.Text = latestReport?.Errors.ToString("N0") ?? "—";
-        DashboardWarnings.Text = latestReport?.Warnings.ToString("N0") ?? "—";
-        DashboardLatest.Visibility = Visible(latestReport is not null);
-        DashboardLatest.Text = latestReport is null ? "" : $"Latest report · {latestReport.Label}";
-        LatestComparisonButton.Visibility = Visible(latestComparison is not null);
+        DashboardTotal.Text = latestOverview?.Total.ToString("N0") ?? "—";
+        DashboardErrors.Text = latestOverview?.Errors.ToString("N0") ?? "—";
+        DashboardWarnings.Text = latestOverview?.Warnings.ToString("N0") ?? "—";
+        DashboardLatest.Visibility = Visible(latestOverview is not null);
+        DashboardLatest.Text = latestOverview is null ? "" : $"Latest report · {latestOverview.Label}";
+        LatestComparisonButton.Visibility = Visible(latestComparison is not null || latestSavedComparison is not null);
     }
 
     private async Task RefreshHistoryAsync()
@@ -247,11 +264,16 @@ public partial class MainWindow : Window
 
     private async Task RestoreHistoryAsync(ListBox list)
     {
-        if (busy || list.SelectedItem is not SavedReport selected) return;
+        if (list.SelectedItem is SavedReport selected) await RestoreHistoryAsync(selected.Entry);
+    }
+
+    private async Task RestoreHistoryAsync(HistoryEntry entry)
+    {
+        if (busy) return;
         SetBusy(true, "Opening report");
         try
         {
-            var snapshot = await Task.Run(() => ReadHistory(selected.Entry));
+            var snapshot = await Task.Run(() => ReadHistory(entry));
             OpenSnapshot(snapshot);
         }
         catch (Exception error) { ShowFailure("history.open", "The saved report could not be opened.", error); }
@@ -278,9 +300,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OpenLatestComparison(object sender, RoutedEventArgs e)
+    private async void OpenLatestComparison(object sender, RoutedEventArgs e)
     {
-        if (!busy && latestComparison is { } snapshot) OpenSnapshot(snapshot);
+        if (busy) return;
+        if (latestComparison is { } snapshot) OpenSnapshot(snapshot);
+        else if (latestSavedComparison is { } saved) await RestoreHistoryAsync(saved);
     }
 
     private async void OpenHistory(object sender, MouseButtonEventArgs e)

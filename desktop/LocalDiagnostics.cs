@@ -10,8 +10,17 @@ internal sealed class LocalDiagnostics(string filePath)
     private const int SizeLimit = 256 * 1024;
     private readonly object gate = new();
 
-    internal static string DataDirectory =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ErrorHunt");
+    internal static string DataDirectory
+    {
+        get
+        {
+            var profile = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                Environment.SpecialFolderOption.DoNotVerify);
+            return Path.IsPathFullyQualified(profile)
+                ? Path.Combine(profile, "ErrorHunt")
+                : Path.Combine(Path.GetTempPath(), "Diffault");
+        }
+    }
 
     internal static LocalDiagnostics Default { get; } =
         new(Path.Combine(DataDirectory, "diagnostics.log"));

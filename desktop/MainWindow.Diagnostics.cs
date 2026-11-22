@@ -43,10 +43,7 @@ public partial class MainWindow
             Existing = data.Existing.Select(item => new DiagnosticRow(item, "Existing")).ToArray();
             MoreFrequent = Existing.Where(row => row.Item.Count > row.Item.PreviousCount).ToArray();
             Rows = kind == AnalysisKind.Comparison ? [.. Fixed, .. New, .. Existing] : [.. New, .. Existing, .. Fixed];
-            var current = data.New.Concat(data.Existing);
-            Total = data.New.Length + data.Existing.Length;
-            Errors = current.Count(item => item.Severity.Equals("error", StringComparison.OrdinalIgnoreCase));
-            Warnings = current.Count(item => item.Severity.Equals("warning", StringComparison.OrdinalIgnoreCase));
+            Overview = ReportOverview.Summarize(label, data);
             Severities = Options(Rows.Select(row => row.Item.Severity), "All severities", Capitalize);
             Languages = Options(Rows.Select(row => row.Item.Language), "All languages", Capitalize);
             Files = Options(Rows.Select(row => row.Item.File), "All files", value => value, StringComparer.Ordinal);
@@ -60,9 +57,10 @@ public partial class MainWindow
         public DiagnosticRow[] Existing { get; }
         public DiagnosticRow[] MoreFrequent { get; }
         public DiagnosticRow[] Rows { get; }
-        public int Total { get; }
-        public int Errors { get; }
-        public int Warnings { get; }
+        public ReportOverview Overview { get; }
+        public int Total => Overview.Total;
+        public int Errors => Overview.Errors;
+        public int Warnings => Overview.Warnings;
         public FilterOption[] Severities { get; }
         public FilterOption[] Languages { get; }
         public FilterOption[] Files { get; }
@@ -96,7 +94,7 @@ public partial class MainWindow
             .Order(StringComparer.OrdinalIgnoreCase)
             .Select(value => new FilterOption(value, label(value)))];
 
-    private static string? ChooseFile(string title = "Open log", bool json = false)
+    private string? ChooseFile(string title = "Open log", bool json = false)
     {
         var dialog = new OpenFileDialog
         {
@@ -104,7 +102,7 @@ public partial class MainWindow
             Filter = json ? "Diagnostic arrays|*.json" : "Log files|*.log;*.txt;*.out;*.err|All files|*.*",
             CheckFileExists = true
         };
-        return dialog.ShowDialog() == true ? dialog.FileName : null;
+        return ShowFileDialog(dialog, "input.choose", "The input file picker could not be opened.") ? dialog.FileName : null;
     }
 
     private async void OpenLog(object sender, RoutedEventArgs e)
@@ -235,7 +233,7 @@ public partial class MainWindow
         {
             var snapshot = await Task.Run(async () => new WorkspaceReport(
                 await RunEngine(command, files, text).ConfigureAwait(false), kind, label));
-            latestReport = snapshot;
+            latestOverview = snapshot.Overview;
             if (kind == AnalysisKind.Comparison)
             {
                 comparison = latestComparison = snapshot;
@@ -492,21 +490,40 @@ public partial class MainWindow
         start.ArgumentList.Add(command);
         foreach (var file in files) start.ArgumentList.Add(file);
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Unable to start the engine.");
-        var output = process.StandardOutput.ReadToEndAsync();
+        var output = ReadEngineOutputAsync(process.StandardOutput.BaseStream, command is "compare" or "compare-reports");
         var errors = process.StandardError.BaseStream.CopyToAsync(Stream.Null);
         if (text is not null)
         {
-            try { await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new { before = text })); }
+            try { await JsonSerializer.SerializeAsync(process.StandardInput.BaseStream, new { before = text }); }
             catch (IOException) { /* The engine may close its input when the request exceeds its limit. */ }
             finally { process.StandardInput.Close(); }
         }
         await process.WaitForExitAsync();
         await errors;
-        var json = await output;
+        Report result;
+        try { result = await output; }
+        catch (JsonException) when (process.ExitCode != 0) { throw new EngineFailure(process.ExitCode); }
         if (process.ExitCode != 0) throw new EngineFailure(process.ExitCode);
-        return command is "compare" or "compare-reports"
-            ? JsonSerializer.Deserialize<Report>(json, Report.JsonOptions)!
-            : new Report([], JsonSerializer.Deserialize<Diagnostic[]>(json, Report.JsonOptions)!, []);
+        return result;
+    }
+
+    private static async Task<Report> ReadEngineOutputAsync(Stream stdout, bool compare)
+    {
+        try
+        {
+            if (compare)
+                return await JsonSerializer.DeserializeAsync<Report>(stdout, Report.JsonOptions)
+                    ?? throw new JsonException("Missing comparison report.");
+            var diagnostics = await JsonSerializer.DeserializeAsync<Diagnostic[]>(stdout, Report.JsonOptions)
+                ?? throw new JsonException("Missing diagnostics.");
+            return new Report([], diagnostics, []);
+        }
+        catch (JsonException)
+        {
+            // An early parse failure must not block the child on a full output pipe.
+            await stdout.CopyToAsync(Stream.Null);
+            throw;
+        }
     }
 
 }

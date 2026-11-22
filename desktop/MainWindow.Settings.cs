@@ -10,7 +10,7 @@ namespace ErrorHunt;
 public partial class MainWindow
 {
     private sealed record Preferences(bool KeepHistory = true, bool Sarif = false,
-        string? Project = null, string? Editor = null);
+        string? Project = null, string? Editor = null, Appearance Theme = Appearance.System);
 
     private readonly string preferencesPath;
     private Preferences preferences = new();
@@ -23,7 +23,11 @@ public partial class MainWindow
         {
             Directory.CreateDirectory(dataDirectory);
             if (File.Exists(preferencesPath))
-                preferences = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(preferencesPath)) ?? new();
+            {
+                using var file = File.OpenRead(preferencesPath);
+                if (file.Length > 64 * 1024) throw new IOException("Settings file exceeds the supported size.");
+                preferences = JsonSerializer.Deserialize<Preferences>(file) ?? new();
+            }
         }
         catch (Exception error) when (error is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -33,6 +37,7 @@ public partial class MainWindow
 
     private void ShowPreferences()
     {
+        ThemeSelection.SelectedIndex = Enum.IsDefined(preferences.Theme) ? (int)preferences.Theme : 0;
         SaveHistory.IsChecked = preferences.KeepHistory;
         ExportFormat.SelectedIndex = preferences.Sarif ? 1 : 0;
         selectedProject = preferences.Project;
@@ -49,7 +54,7 @@ public partial class MainWindow
     private void ChooseProject(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog { Title = "Choose the local project folder" };
-        if (dialog.ShowDialog() != true) return;
+        if (!ShowFileDialog(dialog, "settings.project", "The project folder picker could not be opened.")) return;
         selectedProject = dialog.FolderName;
         UpdatePaths();
     }
@@ -62,7 +67,7 @@ public partial class MainWindow
             Filter = "Applications|*.exe",
             CheckFileExists = true
         };
-        if (dialog.ShowDialog() != true) return;
+        if (!ShowFileDialog(dialog, "settings.editor", "The editor picker could not be opened.")) return;
         selectedEditor = dialog.FileName;
         UpdatePaths();
     }
@@ -75,7 +80,7 @@ public partial class MainWindow
 
     private void SaveSettings(object sender, RoutedEventArgs e)
     {
-        var updated = new Preferences(SaveHistory.IsChecked == true, ExportFormat.SelectedIndex == 1, selectedProject, selectedEditor);
+        var updated = new Preferences(SaveHistory.IsChecked == true, ExportFormat.SelectedIndex == 1, selectedProject, selectedEditor, SelectedAppearance);
         try
         {
             var temporary = $"{preferencesPath}.{Guid.NewGuid():N}.tmp";
@@ -97,6 +102,42 @@ public partial class MainWindow
             ShowFailure("settings.save", "Settings could not be saved. Check access to your local data folder.", error);
         }
     }
+
+    private async void ViewDiagnosticLog(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var entries = await Task.Run(diagnostics.Read);
+            new DiagnosticLogWindow(entries) { Owner = this }.ShowDialog();
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            ShowFailure("diagnostics.view", "The local diagnostic log could not be read.", error);
+        }
+    }
+
+    private async void ExportDiagnosticLog(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            FileName = "diffault-diagnostics.txt",
+            Filter = "Text log|*.txt",
+            OverwritePrompt = true
+        };
+        if (!ShowFileDialog(dialog, "diagnostics.destination", "The diagnostic log location could not be selected.")) return;
+        try
+        {
+            await WriteDiagnosticLogAsync(dialog.FileName);
+            Status.Text = "Diagnostic log exported.";
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            ShowFailure("diagnostics.export", "The diagnostic log could not be exported.", error);
+        }
+    }
+
+    private Task WriteDiagnosticLogAsync(string path) =>
+        Task.Run(() => File.WriteAllText(path, diagnostics.Read()));
 
     private void OpenSource(object sender, RoutedEventArgs e)
     {
@@ -141,13 +182,23 @@ public partial class MainWindow
             Filter = sarif ? "SARIF report|*.sarif" : "JSON report|*.json",
             OverwritePrompt = true
         };
-        if (dialog.ShowDialog() != true) return;
+        if (!ShowFileDialog(dialog, "report.destination", "The report location could not be selected.")) return;
         try
         {
             await WriteReportAsync(snapshot.Data, dialog.FileName, sarif);
             Status.Text = $"Exported {Path.GetFileName(dialog.FileName)}";
         }
         catch (Exception error) { ShowFailure("report.export", "The report could not be written to the selected location.", error); }
+    }
+
+    private bool ShowFileDialog(CommonDialog dialog, string operation, string failure)
+    {
+        try { return dialog.ShowDialog(this) == true; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
+        {
+            ShowFailure(operation, failure, error);
+            return false;
+        }
     }
 
     private async void ExportPreferred(object sender, RoutedEventArgs e) => await Export(preferences.Sarif);
