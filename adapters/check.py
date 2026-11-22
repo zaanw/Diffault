@@ -76,7 +76,10 @@ def main():
         before.write_text(json.dumps(rows + rows[:1]), encoding="utf-8")
         after.write_text(json.dumps(rows), encoding="utf-8")
         result = run([str(args.engine.resolve()), "compare-reports", str(before), str(after)], "")
-        assert result == {"fixed": [], "new": [], "existing": rows}, result
+        earlier_counts = [row["count"] for row in rows]
+        earlier_counts[0] += rows[0]["count"]
+        expected = [dict(row, previous_count=count) for row, count in zip(rows, earlier_counts)]
+        assert result == {"fixed": [], "new": [], "existing": expected}, result
     print(f"{args.adapter}: verified adapter output and engine comparison")
 
 

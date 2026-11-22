@@ -1,4 +1,4 @@
-name: Desktop
+name: Diffault Desktop
 on:
   push:
   pull_request:
@@ -30,7 +30,7 @@ jobs:
         run: |
           $engine = (Resolve-Path engine/target/x86_64-pc-windows-msvc/release/errorhunt-engine.exe).Path
           dotnet publish desktop/ErrorHunt.Desktop.csproj -c Release -r win-x64 --self-contained -p:RestoreLockedMode=true "-p:EngineExecutable=$engine" -o artifacts/win-x64
-          if (!(Test-Path artifacts/win-x64/ErrorHunt.Desktop.exe) -or !(Test-Path artifacts/win-x64/errorhunt-engine.exe)) {
+          if (!(Test-Path artifacts/win-x64/Diffault.exe) -or !(Test-Path artifacts/win-x64/errorhunt-engine.exe)) {
             throw "Missing executable in the Windows build."
           }
           dotnet run --no-build --no-restore --project checks/ErrorHunt.Checks.csproj -- artifacts/win-x64/errorhunt-engine.exe
@@ -39,10 +39,10 @@ jobs:
         run: |
           $before = Join-Path $env:RUNNER_TEMP 'errorhunt-before.log'
           $after = Join-Path $env:RUNNER_TEMP 'errorhunt-after.log'
-          @('Main.cs(1,2): error CS0103: missing', 'old.go:2: undefined: old') | Set-Content -Encoding utf8 $before
-          @('Main.cs(7,5): error CS0103: missing', 'new.go:2: undefined: new') | Set-Content -Encoding utf8 $after
+          @('Main.cs(1,2): error CS0103: missing', 'stable.go:2: undefined: stable', 'old.go:2: undefined: old') | Set-Content -Encoding utf8 $before
+          @('Main.cs(7,5): error CS0103: missing', 'Main.cs(8,5): error CS0103: missing', 'stable.go:4: undefined: stable', 'new.go:2: undefined: new') | Set-Content -Encoding utf8 $after
           $stderr = Join-Path $env:RUNNER_TEMP 'errorhunt-wpf-stderr.log'
-          $process = Start-Process artifacts/win-x64/ErrorHunt.Desktop.exe -ArgumentList @('--smoke-test', ('"' + $before + '"'), ('"' + $after + '"')) -PassThru
+          $process = Start-Process artifacts/win-x64/Diffault.exe -ArgumentList @('--smoke-test', ('"' + $before + '"'), ('"' + $after + '"')) -PassThru
           if (!$process.WaitForExit(30000)) {
             $process.Kill()
             throw "The WPF smoke test timed out."
@@ -53,7 +53,7 @@ jobs:
           }
       - uses: actions/upload-artifact@v4
         with:
-          name: ErrorHunt-win-x64
+          name: Diffault-win-x64
           path: artifacts/win-x64/
           if-no-files-found: error
 
@@ -84,7 +84,7 @@ jobs:
           npm test
       - uses: actions/upload-artifact@v4
         with:
-          name: ErrorHunt-report-viewer
+          name: Diffault-report-viewer
           path: viewer/dist/index.html
           if-no-files-found: error
 

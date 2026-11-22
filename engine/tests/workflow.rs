@@ -68,6 +68,25 @@ fn compares_groups_and_preserves_after_location() {
     assert_eq!(result.new[0].file.as_deref(), Some("new.go"));
     assert_eq!(result.existing[0].line, Some(8));
     assert_eq!(result.existing[0].count, 1);
+    assert_eq!(result.existing[0].previous_count, Some(2));
+}
+
+#[test]
+fn compares_repeat_counts_without_changing_diagnostic_categories() {
+    let before = parse("a.go:5: broken\nb.go:1: stable\nold.go:2: fixed\n");
+    let after =
+        parse("a.go:8: broken\na.go:9: broken\na.go:11: broken\nb.go:3: stable\nnew.go:2: new\n");
+    let result = compare(before, after);
+    assert_eq!(result.fixed[0].previous_count, None);
+    assert_eq!(result.new[0].previous_count, None);
+    assert_eq!(
+        result
+            .existing
+            .iter()
+            .map(|item| (item.previous_count, item.count))
+            .collect::<Vec<_>>(),
+        vec![(Some(1), 3), (Some(1), 1)]
+    );
 }
 
 #[test]

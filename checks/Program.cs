@@ -16,7 +16,7 @@ try
     var after = Path.Combine(directory.FullName, "после.log");
     const string kept = @"C:\Проект\Main.cs";
     File.WriteAllText(before, $"{kept}(1,2): error CS0103: café\nold.go:5: undefined: old\n", Encoding.Unicode);
-    File.WriteAllText(after, $"{kept}(7,5): error CS0103: café\nnew.go:5: undefined: new\n", Encoding.UTF8);
+    File.WriteAllText(after, $"{kept}(7,5): error CS0103: café\n{kept}(8,5): error CS0103: café\nnew.go:5: undefined: new\n", Encoding.UTF8);
     var start = new ProcessStartInfo(Path.GetFullPath(args[0]))
     {
         RedirectStandardOutput = true, UseShellExecute = false, StandardOutputEncoding = Encoding.UTF8
@@ -29,15 +29,28 @@ try
     var report = JsonSerializer.Deserialize<Report>(json, Report.JsonOptions)!;
     Require(report.Fixed.Single().File == "old.go", "Fixed group");
     Require(report.New.Single().File == "new.go", "New group");
-    Require(report.Existing.Single() is { File: kept, Line: 7, Message: "café" }, "Existing group");
+    Require(report.Existing.Single() is { File: kept, Line: 7, Message: "café", Count: 2, PreviousCount: 1 },
+        "Existing group retains both counts");
     using var exportedJson = JsonDocument.Parse(report.ToJson());
     Require(exportedJson.RootElement.GetProperty("existing")[0].GetProperty("column").GetInt32() == 5,
         "JSON column");
+    Require(exportedJson.RootElement.GetProperty("existing")[0].GetProperty("previous_count").GetInt32() == 1,
+        "JSON previous count");
+    Require(!exportedJson.RootElement.GetProperty("new")[0].TryGetProperty("previous_count", out _),
+        "New diagnostics omit the previous count");
+    var olderReport = """{"fixed":[],"new":[],"existing":[{"language":"go","severity":"error","message":"broken","original":"broken","count":1}]}""";
+    Require(JsonSerializer.Deserialize<Report>(olderReport, Report.JsonOptions)!.Existing.Single()
+        is { Count: 1, PreviousCount: null }, "Older report has no previous count");
     using var sarif = JsonDocument.Parse(report.ToSarif());
-    var results = sarif.RootElement.GetProperty("runs")[0].GetProperty("results");
+    var run = sarif.RootElement.GetProperty("runs")[0];
+    Require(run.GetProperty("tool").GetProperty("driver").GetProperty("name").GetString() == "Diffault",
+        "SARIF tool name");
+    var results = run.GetProperty("results");
     Require(results[0].GetProperty("baselineState").GetString() == "absent", "SARIF Fixed classification");
     Require(results[1].GetProperty("baselineState").GetString() == "new", "SARIF New classification");
     Require(results[2].GetProperty("baselineState").GetString() == "unchanged", "SARIF Existing classification");
+    Require(results[2].GetProperty("properties").GetProperty("previous_count").GetInt32() == 1,
+        "SARIF previous count");
     var physical = results[2].GetProperty("locations")[0].GetProperty("physicalLocation");
     Require(physical.GetProperty("region").GetProperty("startLine").GetInt32() == 7, "SARIF line");
     var uri = physical.GetProperty("artifactLocation").GetProperty("uri").GetString();

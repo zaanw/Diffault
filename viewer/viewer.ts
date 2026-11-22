@@ -7,14 +7,22 @@ type ReportRow = {
     line: number | null;
     code: string | null;
     message: string;
+    count: number | null;
+    previousCount: number | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function parseCount(value: unknown): number | null {
+    if (value === undefined || value === null) return null;
+    if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) return value;
+    throw new Error("Invalid diagnostic count.");
+}
+
 function parseReport(value: unknown): ReportRow[] {
-    if (!isRecord(value)) throw new Error("Expected an ErrorHunt comparison report.");
+    if (!isRecord(value)) throw new Error("Expected a Diffault comparison report.");
     const groups: Group[] = ["fixed", "new", "existing"];
     return groups.flatMap(group => {
         const entries = value[group];
@@ -28,14 +36,21 @@ function parseReport(value: unknown): ReportRow[] {
                 (line !== null && (typeof line !== "number" || !Number.isSafeInteger(line) || line < 0))) {
                 throw new Error("Invalid diagnostic fields.");
             }
-            return { group, severity, language, file, line, code, message };
+            return { group, severity, language, file, line, code, message,
+                count: parseCount(entry.count),
+                previousCount: group === "existing" ? parseCount(entry.previous_count) : null };
         });
     });
 }
 
-function filterReport(rows: ReportRow[], group: string, query: string): ReportRow[] {
+function isMoreFrequent(row: ReportRow): boolean {
+    return row.count !== null && row.previousCount !== null && row.count > row.previousCount;
+}
+
+function filterReport(rows: ReportRow[], group: string, query: string, moreFrequentOnly = false): ReportRow[] {
     const search = query.trim().toLowerCase();
     return rows.filter(row => (group === "all" || row.group === group) &&
+        (!moreFrequentOnly || isMoreFrequent(row)) &&
         [row.file, row.code, row.message].some(value => value?.toLowerCase().includes(search)));
 }
 
@@ -43,6 +58,7 @@ function initialize() {
     const picker = document.querySelector<HTMLInputElement>("#file")!;
     const query = document.querySelector<HTMLInputElement>("#query")!;
     const group = document.querySelector<HTMLSelectElement>("#group")!;
+    const frequency = document.querySelector<HTMLInputElement>("#frequency")!;
     const status = document.querySelector<HTMLElement>("#status")!;
     const report = document.querySelector<HTMLElement>("#report")!;
     const body = document.querySelector<HTMLTableSectionElement>("#rows")!;
@@ -54,13 +70,16 @@ function initialize() {
     let request = 0;
 
     function render() {
-        const matches = filterReport(rows, group.value, query.value);
+        const matches = filterReport(rows, group.value, query.value, frequency.checked);
         const fragment = document.createDocumentFragment();
         for (const row of matches.slice(0, shown)) {
             const line = row.line === null ? "" : `:${row.line}`;
+            const occurrences = row.count === null ? "—" : row.previousCount === null
+                ? String(row.count) : `${row.previousCount} → ${row.count}`;
             const tr = document.createElement("tr");
             for (const text of [row.group, row.severity, row.language,
                 row.file === null ? "—" : row.file + line,
+                occurrences,
                 [row.code, row.message].filter(Boolean).join(" ")]) {
                 const cell = tr.insertCell();
                 cell.textContent = text;
@@ -85,6 +104,8 @@ function initialize() {
             rows = nextRows;
             group.value = "all";
             query.value = "";
+            frequency.checked = false;
+            frequency.disabled = !rows.some(row => row.previousCount !== null && row.count !== null);
             shown = pageSize;
             report.hidden = false;
             render();
@@ -98,6 +119,7 @@ function initialize() {
         render();
     };
     group.addEventListener("change", changeFilter);
+    frequency.addEventListener("change", changeFilter);
     query.addEventListener("input", changeFilter);
     more.addEventListener("click", () => {
         shown += pageSize;

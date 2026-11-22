@@ -1,7 +1,7 @@
 <Window x:Class="ErrorHunt.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="ErrorHunt" Width="1150" Height="740" MinWidth="820" MinHeight="540"
+    Title="Diffault" Width="1150" Height="740" MinWidth="820" MinHeight="540"
     Background="#101318" Foreground="#E8EDF4" FontFamily="Segoe UI" FontSize="14"
     AllowDrop="True" Drop="DropLogs">
   <Window.Resources>
@@ -46,7 +46,7 @@
     <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
     <Border Background="#1A202B" Padding="16">
       <StackPanel>
-        <TextBlock Text="ErrorHunt" FontWeight="Bold" FontSize="22" Margin="0,5,0,24"/>
+        <TextBlock Text="Diffault" FontWeight="Bold" FontSize="22" Margin="0,5,0,24"/>
         <Button Content="Dashboard" Click="ShowDashboard"/>
         <Button Content="Analyze" Click="ShowAnalyze"/>
         <Button Content="Compare" Click="ShowCompare"/>
@@ -76,6 +76,7 @@
           <Button Content="Fixed" Click="ShowFixed"/>
           <Button Content="New" Click="ShowNew"/>
           <Button Content="Existing" Click="ShowExisting"/>
+          <Button x:Name="MoreFrequentButton" Content="More frequent" Click="ShowMoreFrequent"/>
           <Button x:Name="OpenSourceButton" Content="Open source" Click="OpenSource" IsEnabled="False"/>
           <Button Content="Export preferred format" Click="ExportPreferred"/>
           <Button Content="Export JSON" Click="ExportJson"/>
@@ -110,6 +111,7 @@
           <DataGridTextColumn Header="File" Binding="{Binding File}" Width="2*"/>
           <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="48"/>
           <DataGridTextColumn Header="Column" Binding="{Binding Column}" Width="64"/>
+          <DataGridTextColumn x:Name="BeforeCountColumn" Header="Before" Binding="{Binding PreviousCount}" Width="62"/>
           <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="55"/>
           <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="3*"/>
         </DataGrid.Columns>

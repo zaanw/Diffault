@@ -69,6 +69,10 @@ public partial class MainWindow : Window
     {
         var show = report is not null && page is not ("History" or "Settings");
         ReportActions.Visibility = Visible(show);
+        MoreFrequentButton.Visibility = Visible(report?.Existing.Any(item => item.PreviousCount is not null) == true);
+        var moreFrequentCount = report?.Existing.Count(item => item.Count > item.PreviousCount) ?? 0;
+        MoreFrequentButton.Content = $"More frequent ({moreFrequentCount})";
+        MoreFrequentButton.IsEnabled = moreFrequentCount > 0;
         Results.Visibility = Visible(show);
         Search.Visibility = Visible(show);
         Summary.Visibility = Visible(page != "Settings");
@@ -287,24 +291,30 @@ public partial class MainWindow : Window
 
     internal async Task VerifyCompare(string before, string after)
     {
+        if (Title != "Diffault") throw new InvalidOperationException("Unexpected application title.");
         preferences = preferences with { KeepHistory = false };
         Navigate("Compare");
         (beforePath, afterPath) = (before, after);
         ShowFiles();
         if (!RunCompare.IsEnabled) throw new InvalidOperationException("Compare is unavailable.");
         await Run("compare", [before, after], "Smoke test");
-        if (report is not { Fixed.Length: 1, New.Length: 1, Existing.Length: 1 } result ||
+        if (report is not { Fixed.Length: 1, New.Length: 1, Existing.Length: 2 } result ||
             Results.ItemsSource != result.New)
             throw new InvalidOperationException($"The comparison did not populate all groups. {Status.Text}");
         Display(result.Existing);
         if (Results.ItemsSource != result.Existing || result.Existing[0].Line != 7)
             throw new InvalidOperationException("Existing diagnostics were not shown at their new location.");
+        MoreFrequentButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        if (Results.Items.Count != 1 ||
+            Results.Items[0] is not Diagnostic { Count: 2, PreviousCount: 1 } ||
+            BeforeCountColumn.Visibility != Visibility.Visible)
+            throw new InvalidOperationException("The frequency filter did not show the increased diagnostic.");
     }
 
     private static async Task<Report> RunEngine(string command, string[] files, string? text)
     {
         var executable = Path.Combine(AppContext.BaseDirectory, "errorhunt-engine.exe");
-        if (!File.Exists(executable)) throw new FileNotFoundException("The bundled ErrorHunt engine is missing.");
+        if (!File.Exists(executable)) throw new FileNotFoundException("The bundled Diffault engine is missing.");
         var start = new ProcessStartInfo(executable)
         {
             UseShellExecute = false,
@@ -338,10 +348,14 @@ public partial class MainWindow : Window
     private void ShowFixed(object sender, RoutedEventArgs e) => Display(report?.Fixed);
     private void ShowNew(object sender, RoutedEventArgs e) => Display(report?.New);
     private void ShowExisting(object sender, RoutedEventArgs e) => Display(report?.Existing);
+    private void ShowMoreFrequent(object sender, RoutedEventArgs e) =>
+        Display(report?.Existing.Where(item => item.Count > item.PreviousCount).ToArray());
 
     private void Display(Diagnostic[]? items)
     {
         displayed = items ?? [];
+        var hasBeforeCount = displayed.Any(item => item.PreviousCount is not null);
+        BeforeCountColumn.Visibility = Visible(hasBeforeCount);
         ApplySearch();
     }
 
@@ -393,7 +407,7 @@ public partial class MainWindow : Window
         if (report is not { } snapshot) return;
         var dialog = new SaveFileDialog
         {
-            FileName = sarif ? "errorhunt.sarif" : "errorhunt.json",
+            FileName = sarif ? "diffault.sarif" : "diffault.json",
             Filter = sarif ? "SARIF report|*.sarif" : "JSON report|*.json",
             OverwritePrompt = true
         };
