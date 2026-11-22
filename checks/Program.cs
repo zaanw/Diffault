@@ -42,7 +42,10 @@ try
     Require(JsonSerializer.Deserialize<Report>(olderReport, Report.JsonOptions)!.Existing.Single()
         is { Count: 1, PreviousCount: null }, "Older report has no previous count");
     using var sarif = JsonDocument.Parse(report.ToSarif());
-    var results = sarif.RootElement.GetProperty("runs")[0].GetProperty("results");
+    var run = sarif.RootElement.GetProperty("runs")[0];
+    Require(run.GetProperty("tool").GetProperty("driver").GetProperty("name").GetString() == "Diffault",
+        "SARIF tool name");
+    var results = run.GetProperty("results");
     Require(results[0].GetProperty("baselineState").GetString() == "absent", "SARIF Fixed classification");
     Require(results[1].GetProperty("baselineState").GetString() == "new", "SARIF New classification");
     Require(results[2].GetProperty("baselineState").GetString() == "unchanged", "SARIF Existing classification");

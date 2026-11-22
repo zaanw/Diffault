@@ -61,7 +61,7 @@ public sealed record Report(Diagnostic[] Fixed, Diagnostic[] New, Diagnostic[] E
         {
             ["$schema"] = "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
             ["version"] = "2.1.0",
-            ["runs"] = new[] { new { tool = new { driver = new { name = "ErrorHunt" } }, results } }
+            ["runs"] = new[] { new { tool = new { driver = new { name = "Diffault" } }, results } }
         }, JsonOptions);
     }
 

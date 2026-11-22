@@ -5,11 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "errorhunt"
 version = "0.1.0a1"
-description = "Local compiler log parser and build-to-build diagnostic comparison"
+description = "Diffault local compiler log parser and build-to-build diagnostic comparison"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 
 [project.scripts]
+diffault = "errorhunt.cli:main"
 errorhunt = "errorhunt.cli:main"
 
 [tool.setuptools.packages.find]

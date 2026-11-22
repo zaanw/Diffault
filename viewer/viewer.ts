@@ -22,7 +22,7 @@ function parseCount(value: unknown): number | null {
 }
 
 function parseReport(value: unknown): ReportRow[] {
-    if (!isRecord(value)) throw new Error("Expected an ErrorHunt comparison report.");
+    if (!isRecord(value)) throw new Error("Expected a Diffault comparison report.");
     const groups: Group[] = ["fixed", "new", "existing"];
     return groups.flatMap(group => {
         const entries = value[group];

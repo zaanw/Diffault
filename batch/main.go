@@ -1,4 +1,4 @@
-// Command errorhunt-batch scans multiple logs with the ErrorHunt engine.
+// Command diffault-batch scans multiple logs with the Diffault engine.
 package main
 
 import (
@@ -56,12 +56,12 @@ func batch(ctx context.Context, engine string, paths []string, parallelism int) 
 }
 
 func run(ctx context.Context, args []string, output, errors io.Writer) int {
-	flags := flag.NewFlagSet("errorhunt-batch", flag.ContinueOnError)
+	flags := flag.NewFlagSet("diffault-batch", flag.ContinueOnError)
 	flags.SetOutput(errors)
-	engine := flags.String("engine", "errorhunt-engine", "ErrorHunt engine executable")
+	engine := flags.String("engine", "errorhunt-engine", "Diffault engine executable")
 	workers := flags.Int("jobs", min(runtime.NumCPU(), 4), "number of concurrent scans")
 	flags.Usage = func() {
-		fmt.Fprintln(errors, "Usage: errorhunt-batch [options] LOG [LOG ...]")
+		fmt.Fprintf(errors, "Usage: %s [options] LOG [LOG ...]\n", flags.Name())
 		flags.PrintDefaults()
 	}
 	if err := flags.Parse(args); err != nil {

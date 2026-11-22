@@ -1,8 +1,9 @@
-"""Command-line interface for ErrorHunt."""
+"""Command-line interface for Diffault."""
 from __future__ import annotations
 import argparse
 import codecs
 import json
+import sys
 from dataclasses import asdict
 from pathlib import Path
 from .core import compare_logs, json_report, parse_log
@@ -14,7 +15,9 @@ def read_log(path: Path) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="errorhunt", description="Parse and compare build errors")
+    invoked_as = Path(sys.argv[0]).stem.casefold()
+    prog = "errorhunt" if invoked_as == "errorhunt" else "diffault"
+    parser = argparse.ArgumentParser(prog=prog, description="Parse and compare build errors")
     commands = parser.add_subparsers(dest="command", required=True)
     scan = commands.add_parser("scan", help="Parse a log into structured diagnostics")
     scan.add_argument("log", type=Path)
@@ -41,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"  {d.file or '<no file>'}:{d.line or '-'} {d.message}")
         return 0
     except OSError as exc:
-        parser.exit(2, f"errorhunt: {exc}\n")
+        parser.exit(2, f"{parser.prog}: {exc}\n")
 
 if __name__ == "__main__":
     raise SystemExit(main())

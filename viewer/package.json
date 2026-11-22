@@ -1,5 +1,5 @@
 {
-  "name": "errorhunt-report-viewer",
+  "name": "diffault-report-viewer",
   "private": true,
   "scripts": {
     "build": "tsc && node build.cjs",

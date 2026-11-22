@@ -291,6 +291,7 @@ public partial class MainWindow : Window
 
     internal async Task VerifyCompare(string before, string after)
     {
+        if (Title != "Diffault") throw new InvalidOperationException("Unexpected application title.");
         preferences = preferences with { KeepHistory = false };
         Navigate("Compare");
         (beforePath, afterPath) = (before, after);
@@ -313,7 +314,7 @@ public partial class MainWindow : Window
     private static async Task<Report> RunEngine(string command, string[] files, string? text)
     {
         var executable = Path.Combine(AppContext.BaseDirectory, "errorhunt-engine.exe");
-        if (!File.Exists(executable)) throw new FileNotFoundException("The bundled ErrorHunt engine is missing.");
+        if (!File.Exists(executable)) throw new FileNotFoundException("The bundled Diffault engine is missing.");
         var start = new ProcessStartInfo(executable)
         {
             UseShellExecute = false,
@@ -406,7 +407,7 @@ public partial class MainWindow : Window
         if (report is not { } snapshot) return;
         var dialog = new SaveFileDialog
         {
-            FileName = sarif ? "errorhunt.sarif" : "errorhunt.json",
+            FileName = sarif ? "diffault.sarif" : "diffault.json",
             Filter = sarif ? "SARIF report|*.sarif" : "JSON report|*.json",
             OverwritePrompt = true
         };

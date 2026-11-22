@@ -1,10 +1,10 @@
-# ErrorHunt
+# Diffault
 
-ErrorHunt reads compiler and runtime logs locally. Compare two builds to identify diagnostics that were fixed, newly introduced, or are still present.
+Diffault reads compiler and runtime logs locally. Compare two builds to identify diagnostics that were fixed, newly introduced, or are still present.
 
 ## Windows desktop
 
-The Windows x64 build contains the WPF application, Rust engine, .NET runtime and SQLite. Extract the entire build archive into one directory and run `ErrorHunt.Desktop.exe`. The program runs offline and does not require Python or build tools.
+The Windows x64 build contains the WPF application, Rust engine, .NET runtime and SQLite. Extract the entire `Diffault-win-x64` archive into one directory and run `Diffault.exe`. The program runs offline and does not require Python or build tools.
 
 - In **Compare**, select **Before** and **After**, then click **Compare logs**. You can also drop two logs on the window and confirm their order. Select **Fixed**, **New** or **Existing** to inspect each group.
 - In **Analyze**, open or drop one log, or select **Analyze clipboard**. Select a diagnostic to see the log text that produced it. Search by file, code or message.
@@ -25,10 +25,10 @@ cargo +1.100.0 build --release --locked --manifest-path engine/Cargo.toml --targ
 $engine = (Resolve-Path engine/target/x86_64-pc-windows-msvc/release/errorhunt-engine.exe).Path
 dotnet run --project checks/ErrorHunt.Checks.csproj -p:RestoreLockedMode=true -- $engine
 dotnet publish desktop/ErrorHunt.Desktop.csproj -c Release -r win-x64 --self-contained -p:RestoreLockedMode=true "-p:EngineExecutable=$engine" -o artifacts/win-x64
-.\artifacts\win-x64\ErrorHunt.Desktop.exe
+.\artifacts\win-x64\Diffault.exe
 ```
 
-The Desktop workflow performs the build and uploads the self-contained application directory as an Actions artifact. The integration check runs the supplied engine against Unicode logs, verifies the three categories, checks JSON and SARIF output and reopens the saved report from SQLite.
+The Diffault Desktop workflow performs the build and uploads the self-contained application directory as an Actions artifact. The integration check runs the supplied engine against Unicode logs, verifies the three categories, checks JSON and SARIF output and reopens the saved report from SQLite.
 
 ## Python compatibility CLI
 
@@ -37,9 +37,11 @@ Requires Python 3.10 or newer.
 ```sh
 python -m pip install -e . pytest
 python -m pytest -q
-errorhunt scan build.log --json
-errorhunt compare before.log after.log --json
+diffault scan build.log --json
+diffault compare before.log after.log --json
 ```
+
+The `errorhunt` command is also available for existing scripts.
 
 ## Batch processing and offline viewer
 
