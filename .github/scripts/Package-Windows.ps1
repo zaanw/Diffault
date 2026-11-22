@@ -92,7 +92,12 @@ If startup fails, check %LOCALAPPDATA%\ErrorHunt\diagnostics.log.
     try {
         if (!$smoke.WaitForExit(45000)) { throw 'The packaged workspace smoke test timed out.' }
         if ($smoke.ExitCode -ne 0) {
-            Get-Content -LiteralPath $options.RedirectStandardError
+            $details = Get-Content -LiteralPath $options.RedirectStandardError -Raw
+            if ($details) { Write-Host $details }
+            $firstLine = ($details -split '[\r\n]+' | Select-Object -First 1)
+            if ($env:GITHUB_ACTIONS -eq 'true' -and $firstLine) {
+                Write-Host "::error title=Diffault smoke test::$firstLine"
+            }
             throw "The packaged workspace smoke test failed with exit code $($smoke.ExitCode)."
         }
     } finally {
