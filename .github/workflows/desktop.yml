@@ -39,10 +39,12 @@ jobs:
         run: |
           $before = Join-Path $env:RUNNER_TEMP 'errorhunt-before.log'
           $after = Join-Path $env:RUNNER_TEMP 'errorhunt-after.log'
+          $screenshots = Join-Path $PWD 'artifacts/workspace-screenshots'
           @('Main.cs(1,2): error CS0103: missing', 'stable.go:2: undefined: stable', 'old.go:2: undefined: old') | Set-Content -Encoding utf8 $before
           @('Main.cs(7,5): error CS0103: missing', 'Main.cs(8,5): error CS0103: missing', 'stable.go:4: undefined: stable', 'new.go:2: undefined: new') | Set-Content -Encoding utf8 $after
           $stderr = Join-Path $env:RUNNER_TEMP 'errorhunt-wpf-stderr.log'
-          $process = Start-Process artifacts/win-x64/Diffault.exe -ArgumentList @('--smoke-test', ('"' + $before + '"'), ('"' + $after + '"')) -PassThru
+          $arguments = @('--smoke-test', ('"' + $before + '"'), ('"' + $after + '"'), ('"' + $screenshots + '"'))
+          $process = Start-Process artifacts/win-x64/Diffault.exe -ArgumentList $arguments -PassThru -RedirectStandardError $stderr
           if (!$process.WaitForExit(30000)) {
             $process.Kill()
             throw "The WPF smoke test timed out."
@@ -51,6 +53,15 @@ jobs:
             Get-Content $stderr
             throw "The WPF smoke test failed with exit code $($process.ExitCode)."
           }
+          if (@(Get-ChildItem $screenshots -Filter '*.png').Count -ne 6) {
+            throw "The WPF smoke test did not capture all six workspace states."
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Diffault-workspace-screenshots
+          path: artifacts/workspace-screenshots/
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: Diffault-win-x64
