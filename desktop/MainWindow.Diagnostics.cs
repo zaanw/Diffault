@@ -399,12 +399,12 @@ public partial class MainWindow
     private static string CategoryLabel(ComparisonCategory selected) =>
         selected == ComparisonCategory.MoreFrequent ? "More frequent" : selected.ToString();
 
-    private void SelectCategory(ComparisonCategory selected)
+    private void SelectCategory(ComparisonCategory selected, Button card)
     {
         category = selected;
         UpdateCategoryHighlight();
         FilterNow();
-        Fade(TableHeader);
+        Fade(card);
     }
 
     private void UpdateCategoryHighlight()
@@ -415,10 +415,11 @@ public partial class MainWindow
         MoreFrequentButton.Tag = Active(category == ComparisonCategory.MoreFrequent);
     }
 
-    private void ShowFixed(object sender, RoutedEventArgs e) => SelectCategory(ComparisonCategory.Fixed);
-    private void ShowNew(object sender, RoutedEventArgs e) => SelectCategory(ComparisonCategory.New);
-    private void ShowExisting(object sender, RoutedEventArgs e) => SelectCategory(ComparisonCategory.Existing);
-    private void ShowMoreFrequent(object sender, RoutedEventArgs e) => SelectCategory(ComparisonCategory.MoreFrequent);
+    private void ShowFixed(object sender, RoutedEventArgs e) => SelectCategory(ComparisonCategory.Fixed, FixedButton);
+    private void ShowNew(object sender, RoutedEventArgs e) => SelectCategory(ComparisonCategory.New, NewButton);
+    private void ShowExisting(object sender, RoutedEventArgs e) => SelectCategory(ComparisonCategory.Existing, ExistingButton);
+    private void ShowMoreFrequent(object sender, RoutedEventArgs e) =>
+        SelectCategory(ComparisonCategory.MoreFrequent, MoreFrequentButton);
 
     private void SelectDiagnostic(object sender, SelectionChangedEventArgs e)
     {

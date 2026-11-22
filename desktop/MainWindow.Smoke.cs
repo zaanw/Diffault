@@ -104,6 +104,11 @@ public partial class MainWindow
         await CaptureWorkspaceAsync(screenshots, "06-dashboard");
         Click(LatestComparisonButton);
         Require(page == Page.Compare && comparison?.Data.Existing.Length == 2, "Latest comparison did not reopen.");
+
+        Click(AnalyzeNav);
+        await RunAsync("stdin", [], "Clipboard", AnalysisKind.Analysis, "demo.go:2: undefined: example");
+        Require(Results.Items.Count == 1 && Results.Items[0] is DiagnosticRow { Item.File: "demo.go" } &&
+            history.List().Length == 2, "Text import failed or ignored the history setting.");
     }
 
     private async Task CaptureWorkspaceAsync(string? outputDirectory, string name)
