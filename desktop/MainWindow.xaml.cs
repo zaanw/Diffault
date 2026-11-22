@@ -12,6 +12,7 @@ public partial class MainWindow : Window
     private enum Page { Dashboard, Analyze, Compare, History, Settings }
 
     private readonly History history;
+    private readonly LocalDiagnostics diagnostics;
     private readonly DispatcherTimer historyTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
     private readonly DispatcherTimer filterTimer = new() { Interval = TimeSpan.FromMilliseconds(140) };
     private Page page;
@@ -22,11 +23,11 @@ public partial class MainWindow : Window
     private WorkspaceReport? latestReport;
     private WorkspaceReport? latestComparison;
 
-    public MainWindow() : this(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ErrorHunt")) { }
+    public MainWindow() : this(LocalDiagnostics.DataDirectory, LocalDiagnostics.Default) { }
 
-    internal MainWindow(string dataDirectory)
+    internal MainWindow(string dataDirectory, LocalDiagnostics? logger = null)
     {
+        diagnostics = logger ?? new LocalDiagnostics(Path.Combine(dataDirectory, "diagnostics.log"));
         InitializeComponent();
         history = new History(Path.Combine(dataDirectory, "history.db"));
         preferencesPath = Path.Combine(dataDirectory, "settings.json");
@@ -104,6 +105,12 @@ public partial class MainWindow : Window
         await RefreshHistoryAsync();
     }
 
+    private void ShowFailure(string operation, string message, Exception error)
+    {
+        diagnostics.Record(operation, error);
+        Status.Text = message;
+    }
+
     private static string Active(bool active) => active ? "True" : "False";
     private static Visibility Visible(bool shown) => shown ? Visibility.Visible : Visibility.Collapsed;
 
@@ -176,10 +183,10 @@ public partial class MainWindow : Window
         catch (Exception error) when (revision == dashboardRevision)
         {
             DashboardEmptyTitle.Text = "History is unavailable";
-            DashboardEmptyDetail.Text = error.Message;
-            Status.Text = error.Message;
+            DashboardEmptyDetail.Text = "Try opening History again after checking local storage.";
+            ShowFailure("history.dashboard", "Saved reports could not be read.", error);
         }
-        catch (Exception) when (revision != dashboardRevision) { }
+        catch (Exception error) when (revision != dashboardRevision) { diagnostics.Record("history.dashboard", error); }
     }
 
     private void UpdateDashboard()
@@ -214,7 +221,8 @@ public partial class MainWindow : Window
             HistoryList.ItemsSource = null;
             HistoryEmpty.Visibility = Visibility.Visible;
             HistoryEmptyTitle.Text = "History is unavailable";
-            HistoryEmptyBody.Text = error.Message;
+            HistoryEmptyBody.Text = "Check that your local data folder is accessible.";
+            ShowFailure("history.list", "Saved reports could not be read.", error);
         }
     }
 
@@ -246,7 +254,7 @@ public partial class MainWindow : Window
             var snapshot = await Task.Run(() => ReadHistory(selected.Entry));
             OpenSnapshot(snapshot);
         }
-        catch (Exception error) { Status.Text = error.Message; }
+        catch (Exception error) { ShowFailure("history.open", "The saved report could not be opened.", error); }
         finally { SetBusy(false); }
     }
 

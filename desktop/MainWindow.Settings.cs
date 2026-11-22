@@ -27,7 +27,7 @@ public partial class MainWindow
         }
         catch (Exception error) when (error is IOException or JsonException or UnauthorizedAccessException)
         {
-            Status.Text = $"Could not load settings. {error.Message}";
+            ShowFailure("settings.load", "Settings could not be read. Defaults are active.", error);
         }
     }
 
@@ -94,7 +94,7 @@ public partial class MainWindow
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            Status.Text = error.Message;
+            ShowFailure("settings.save", "Settings could not be saved. Check access to your local data folder.", error);
         }
     }
 
@@ -118,7 +118,7 @@ public partial class MainWindow
             start.ArgumentList.Add(source);
             Process.Start(start)?.Dispose();
         }
-        catch (Exception error) { Status.Text = error.Message; }
+        catch (Exception error) { ShowFailure("source.open", "Could not open a local source file. Check the project folder and editor in Settings.", error); }
     }
 
     private void OpenExportMenu(object sender, RoutedEventArgs e)
@@ -147,7 +147,7 @@ public partial class MainWindow
             await WriteReportAsync(snapshot.Data, dialog.FileName, sarif);
             Status.Text = $"Exported {Path.GetFileName(dialog.FileName)}";
         }
-        catch (Exception error) { Status.Text = error.Message; }
+        catch (Exception error) { ShowFailure("report.export", "The report could not be written to the selected location.", error); }
     }
 
     private async void ExportPreferred(object sender, RoutedEventArgs e) => await Export(preferences.Sarif);

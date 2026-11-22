@@ -16,6 +16,7 @@ public partial class App : Application
         }
 
         MainWindow = new MainWindow();
+        MainWindow.Loaded += (_, _) => LocalDiagnostics.Default.Record("startup.ready");
         MainWindow.Show();
     }
 

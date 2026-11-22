@@ -128,7 +128,7 @@ public partial class MainWindow
             else
                 Status.Text = "The clipboard contains no text.";
         }
-        catch (Exception error) { Status.Text = error.Message; }
+        catch (Exception error) { ShowFailure("clipboard.read", "Could not read the clipboard. Try pasting again.", error); }
     }
 
     private void PickBefore(object sender, RoutedEventArgs e)
@@ -258,7 +258,7 @@ public partial class MainWindow
                 }
                 catch (Exception error)
                 {
-                    Status.Text = $"Report is available. Could not save to history: {error.Message}";
+                    ShowFailure("history.write", "The report is available, but history could not be saved.", error);
                 }
             }
             else
@@ -266,7 +266,16 @@ public partial class MainWindow
                 Status.Text = $"Analysis complete · {label}";
             }
         }
-        catch (Exception error) { Status.Text = error.Message; }
+        catch (Exception error)
+        {
+            var message = error switch
+            {
+                FileNotFoundException or DirectoryNotFoundException => "A required file is missing. Check the selected input and the extracted Diffault folder.",
+                UnauthorizedAccessException => "Access was denied. Choose an input you can read.",
+                _ => "Analysis failed. Check the input format and the 64 MiB limit."
+            };
+            ShowFailure("analysis.run", message, error);
+        }
         finally { SetBusy(false); }
     }
 
@@ -460,12 +469,19 @@ public partial class MainWindow
 
     private static async Task<Report> RunEngine(string command, string[] files, string? text)
     {
+        foreach (var file in files)
+        {
+            var input = new FileInfo(file);
+            if (!input.Exists) throw new FileNotFoundException("Input file is missing.");
+            if (input.Length > 64 * 1024 * 1024) throw new IOException("Input exceeds the supported size.");
+        }
         var executable = Path.Combine(AppContext.BaseDirectory, "errorhunt-engine.exe");
         if (!File.Exists(executable)) throw new FileNotFoundException("The bundled Diffault engine is missing.");
         var start = new ProcessStartInfo(executable)
         {
             UseShellExecute = false,
             CreateNoWindow = true,
+            WorkingDirectory = AppContext.BaseDirectory,
             RedirectStandardInput = text is not null,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -477,7 +493,7 @@ public partial class MainWindow
         foreach (var file in files) start.ArgumentList.Add(file);
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Unable to start the engine.");
         var output = process.StandardOutput.ReadToEndAsync();
-        var errors = process.StandardError.ReadToEndAsync();
+        var errors = process.StandardError.BaseStream.CopyToAsync(Stream.Null);
         if (text is not null)
         {
             try { await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new { before = text })); }
@@ -485,8 +501,9 @@ public partial class MainWindow
             finally { process.StandardInput.Close(); }
         }
         await process.WaitForExitAsync();
-        if (process.ExitCode != 0) throw new InvalidOperationException((await errors).Trim());
+        await errors;
         var json = await output;
+        if (process.ExitCode != 0) throw new EngineFailure(process.ExitCode);
         return command is "compare" or "compare-reports"
             ? JsonSerializer.Deserialize<Report>(json, Report.JsonOptions)!
             : new Report([], JsonSerializer.Deserialize<Diagnostic[]>(json, Report.JsonOptions)!, []);
