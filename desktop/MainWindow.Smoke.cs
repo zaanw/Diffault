@@ -109,23 +109,25 @@ public partial class MainWindow
             "Settings were not saved.");
         await CaptureWorkspaceAsync(screenshots, "06-settings-dark");
 
-        var reopened = new MainWindow(workingDirectory);
-        try
-        {
-            Require(reopened.preferences is { KeepHistory: false, Sarif: true, Theme: Appearance.Dark },
-                "Saved preferences could not be reloaded.");
-            await reopened.RefreshDashboardAsync();
-            Require(reopened.latestComparison is null && reopened.latestSavedComparison is not null,
-                "Recent comparison was not loaded lazily.");
-        }
-        finally { reopened.Close(); }
+        Require(ReadPreferences() is { KeepHistory: false, Sarif: true, Theme: Appearance.Dark },
+            "Saved preferences could not be reloaded.");
 
         Click(DashboardNav);
-        Require(page == Page.Dashboard && DashboardTotal.Text == "3" && RecentList.Items.Count == 2 &&
-            LatestComparisonButton.IsVisible, "Dashboard did not show real results.");
+        await Dispatcher.Yield(DispatcherPriority.ContextIdle);
+        Require(page == Page.Dashboard, "Dashboard navigation did not complete.");
+        Require(DashboardTotal.Text == "3" && RecentList.Items.Count == 2,
+            $"Dashboard totals were incorrect (diagnostics {DashboardTotal.Text}, history {RecentList.Items.Count}).");
+        Require(LatestComparisonButton.IsVisible, "The latest comparison shortcut was hidden.");
         await CaptureWorkspaceAsync(screenshots, "07-dashboard");
         Click(LatestComparisonButton);
         Require(page == Page.Compare && comparison?.Data.Existing.Length == 2, "Latest comparison did not reopen.");
+
+        latestOverview = null;
+        latestComparison = null;
+        await RefreshDashboardAsync();
+        Require(latestComparison is null && latestSavedComparison is not null, "Recent comparison was not loaded lazily.");
+        await RestoreHistoryAsync(latestSavedComparison!);
+        Require(page == Page.Compare && comparison?.Data.Existing.Length == 2, "Saved comparison did not reopen.");
 
         Click(AnalyzeNav);
         await RunAsync("stdin", [], "Clipboard", AnalysisKind.Analysis, "demo.go:2: undefined: example");

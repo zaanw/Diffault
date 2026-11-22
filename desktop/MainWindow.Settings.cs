@@ -22,17 +22,20 @@ public partial class MainWindow
         try
         {
             Directory.CreateDirectory(dataDirectory);
-            if (File.Exists(preferencesPath))
-            {
-                using var file = File.OpenRead(preferencesPath);
-                if (file.Length > 64 * 1024) throw new IOException("Settings file exceeds the supported size.");
-                preferences = JsonSerializer.Deserialize<Preferences>(file) ?? new();
-            }
+            preferences = ReadPreferences();
         }
         catch (Exception error) when (error is IOException or JsonException or UnauthorizedAccessException)
         {
             ShowFailure("settings.load", "Settings could not be read. Defaults are active.", error);
         }
+    }
+
+    private Preferences ReadPreferences()
+    {
+        if (!File.Exists(preferencesPath)) return new();
+        using var file = File.OpenRead(preferencesPath);
+        if (file.Length > 64 * 1024) throw new IOException("Settings file exceeds the supported size.");
+        return JsonSerializer.Deserialize<Preferences>(file) ?? new();
     }
 
     private void ShowPreferences()
