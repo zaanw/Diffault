@@ -6,8 +6,9 @@ Diffault reads compiler and runtime logs locally. Compare two builds to identify
 
 The Windows x64 build contains the WPF application, Rust engine, .NET runtime and SQLite. Extract the entire `Diffault-win-x64` archive into one directory and run `Diffault.exe`. The program runs offline and does not require Python or build tools.
 
-- In **Compare**, select **Before** and **After**, then click **Compare logs**. You can also drop two logs on the window and confirm their order. Select **Fixed**, **New** or **Existing** to inspect each group.
-- In **Analyze**, open or drop one log, or select **Analyze clipboard**. Select a diagnostic to see the log text that produced it. Search by file, code or message.
+- **Dashboard** opens logs, resumes the latest comparison, and shows recent results from local history.
+- In **Compare**, select or drop logs in **Before** and **After**, then click **Compare logs**. You can also drop two logs on the window and confirm their order. Select the **Fixed**, **New**, **Existing**, or **More frequent** card to inspect each group.
+- In **Analyze**, browse for a log, drop it, or select **Paste from clipboard**. Search by file, code or message and filter by severity, language or file. Select a diagnostic to open its original log text in the details panel.
 - Export the current report to **JSON** or **SARIF**. Open saved reports from **History**. Settings lets you disable saving future analyses and choose the preferred export format. Choose a local project folder and an editor in **Settings** to enable **Open source** from a selected diagnostic. Existing history stays in `%LOCALAPPDATA%\ErrorHunt\history.db`.
 
 The engine supports common formats for C, C++, C#, Go, Java, Lua, PHP, Python, Rust, SQL, Swift and TypeScript. Log files can be UTF-8 (with or without BOM) or BOM-marked UTF-16. Invalid byte sequences are replaced. The engine accepts files up to 64 MiB per log and displays positions only when captured from the log.

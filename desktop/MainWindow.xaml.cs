@@ -254,6 +254,11 @@ public partial class MainWindow : Window
     {
         if (snapshot.Kind == AnalysisKind.Comparison)
         {
+            if (!ReferenceEquals(comparison, snapshot))
+            {
+                beforePath = afterPath = null;
+                ShowFiles();
+            }
             comparison = snapshot;
             category = ComparisonCategory.New;
             Navigate(Page.Compare);
