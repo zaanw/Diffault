@@ -57,12 +57,32 @@ try
     Require(uri == "file:///C:/%D0%9F%D1%80%D0%BE%D0%B5%D0%BA%D1%82/Main.cs", "SARIF Windows URI");
 
     var database = Path.Combine(directory.FullName, "history.db");
+    using (var legacy = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={database}"))
+    {
+        legacy.Open();
+        using var command = legacy.CreateCommand();
+        command.CommandText = """
+            CREATE TABLE analyses (id INTEGER PRIMARY KEY, analyzed_at TEXT NOT NULL,
+                label TEXT NOT NULL, report_json TEXT NOT NULL);
+            INSERT INTO analyses (analyzed_at, label, report_json)
+            VALUES ('2025-01-01T12:00:00.0000000+00:00', 'Legacy log', $json);
+            """;
+        command.Parameters.AddWithValue("$json", new Report([], report.Existing, []).ToJson());
+        command.ExecuteNonQuery();
+    }
     var history = new History(database);
     var label = "Сравнение 'before' → after";
-    history.Save(label, report);
+    history.Save(label, report, AnalysisKind.Comparison);
     var reopened = new History(database);
-    var entry = reopened.List().Single();
+    var entries = reopened.List();
+    var entry = entries[0];
     Require(entry.Label == label && reopened.Load(entry.Id).ToJson() == report.ToJson(), "SQLite round trip");
+    Require(entry is { Kind: AnalysisKind.Comparison, DiagnosticCount: 3 }, "Saved history metadata");
+    Require(entries[1] is { Label: "Legacy log", Kind: AnalysisKind.Unknown, DiagnosticCount: 1 } &&
+        reopened.Load(entries[1].Id).New.Length == 1, "Existing SQLite history requires no rewrite");
+    Require(reopened.LatestComparison()?.Id == entry.Id &&
+        reopened.List("СРАВНЕНИЕ").Single().Id == entry.Id &&
+        reopened.List("comparison").Single().Id == entry.Id, "History search and latest comparison");
     var project = directory.CreateSubdirectory("repo");
     var source = Path.Combine(project.FullName, "Main.cs");
     File.WriteAllText(source, "// source");

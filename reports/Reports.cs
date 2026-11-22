@@ -77,7 +77,10 @@ public sealed record Report(Diagnostic[] Fixed, Diagnostic[] New, Diagnostic[] E
     }
 }
 
-public sealed record HistoryEntry(long Id, string Date, string Label);
+public enum AnalysisKind { Unknown, Analysis, Comparison }
+
+public sealed record HistoryEntry(long Id, string Date, string Label,
+    AnalysisKind Kind = AnalysisKind.Unknown, int? DiagnosticCount = null);
 
 public sealed class History(string path)
 {
@@ -102,26 +105,72 @@ public sealed class History(string path)
         }
     }
 
-    public void Save(string label, Report report)
+    public void Save(string label, Report report, AnalysisKind kind = AnalysisKind.Unknown)
     {
         using var connection = Open();
+        using var transaction = connection.BeginTransaction();
         using var command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO analyses (analyzed_at, label, report_json) VALUES ($date, $label, $report)";
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO analyses (analyzed_at, label, report_json) VALUES ($date, $label, $report);
+            INSERT INTO analysis_details (analysis_id, kind, diagnostic_count)
+            VALUES (last_insert_rowid(), $kind, $count);
+            """;
         command.Parameters.AddWithValue("$date", DateTimeOffset.UtcNow.ToString("O"));
         command.Parameters.AddWithValue("$label", label);
         command.Parameters.AddWithValue("$report", report.ToJson());
+        command.Parameters.AddWithValue("$kind", kind.ToString());
+        command.Parameters.AddWithValue("$count", report.Fixed.Length + report.New.Length + report.Existing.Length);
         command.ExecuteNonQuery();
+        transaction.Commit();
     }
 
-    public HistoryEntry[] List()
+    public HistoryEntry[] List(string search = "", int limit = 100) => Find(search, limit, comparisonsOnly: false);
+
+    public HistoryEntry? LatestComparison() => Find("", 1, comparisonsOnly: true).FirstOrDefault();
+
+    private HistoryEntry[] Find(string search, int limit, bool comparisonsOnly)
     {
         using var connection = Open();
+        connection.CreateFunction<string, string, bool>("contains_text",
+            (value, query) => value.Contains(query, StringComparison.OrdinalIgnoreCase), isDeterministic: true);
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT id, analyzed_at, label FROM analyses ORDER BY id DESC LIMIT 100";
+        command.CommandText = """
+            WITH entries AS (
+                SELECT a.id, a.analyzed_at, a.label,
+                    CASE
+                        WHEN d.kind IS NOT NULL AND d.kind <> 'Unknown' THEN d.kind
+                        WHEN json_valid(a.report_json) THEN
+                            CASE WHEN coalesce(json_array_length(a.report_json, '$.fixed'), 0) > 0
+                                   OR coalesce(json_array_length(a.report_json, '$.existing'), 0) > 0
+                                THEN 'Comparison' ELSE 'Unknown' END
+                        ELSE 'Unknown'
+                    END AS kind,
+                    CASE
+                        WHEN d.diagnostic_count IS NOT NULL THEN d.diagnostic_count
+                        WHEN json_valid(a.report_json)
+                            THEN coalesce(json_array_length(a.report_json, '$.fixed'), 0)
+                               + coalesce(json_array_length(a.report_json, '$.new'), 0)
+                               + coalesce(json_array_length(a.report_json, '$.existing'), 0)
+                    END AS diagnostic_count
+                FROM analyses AS a
+                LEFT JOIN analysis_details AS d ON a.id = d.analysis_id
+            )
+            SELECT id, analyzed_at, label, kind, diagnostic_count FROM entries
+            WHERE ($comparisonsOnly = 0 OR kind = 'Comparison')
+                AND ($search = '' OR contains_text(label, $search)
+                     OR contains_text(analyzed_at, $search) OR contains_text(kind, $search))
+            ORDER BY id DESC LIMIT $limit
+            """;
+        command.Parameters.AddWithValue("$comparisonsOnly", comparisonsOnly);
+        command.Parameters.AddWithValue("$search", search.Trim());
+        command.Parameters.AddWithValue("$limit", limit);
         using var reader = command.ExecuteReader();
         var entries = new List<HistoryEntry>();
         while (reader.Read())
-            entries.Add(new(reader.GetInt64(0), reader.GetString(1), reader.GetString(2)));
+            entries.Add(new(reader.GetInt64(0), reader.GetString(1), reader.GetString(2),
+                Enum.TryParse<AnalysisKind>(reader.GetString(3), out var kind) ? kind : AnalysisKind.Unknown,
+                reader.IsDBNull(4) ? null : reader.GetInt32(4)));
         return entries.ToArray();
     }
 
