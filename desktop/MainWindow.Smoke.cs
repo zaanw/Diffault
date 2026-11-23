@@ -253,7 +253,15 @@ public partial class MainWindow
         await CompareFilesAsync(before, after, "compare");
         await RefreshDashboardAsync();
 
-        foreach (var (width, height) in new[] { (1280, 720), (1000, 620) })
+        var workArea = SystemParameters.WorkArea;
+        var wideWidth = Math.Clamp(workArea.Width, MinWidth, 1280);
+        var wideHeight = Math.Clamp(workArea.Height, MinHeight, 720);
+        var sizes = new[]
+        {
+            ("wide", wideWidth, wideHeight),
+            ("compact", Math.Max(MinWidth, wideWidth - 200), Math.Max(MinHeight, wideHeight - 100))
+        };
+        foreach (var (size, width, height) in sizes)
         {
             Width = width;
             Height = height;
@@ -281,11 +289,12 @@ public partial class MainWindow
 
                     await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
                     Shell.UpdateLayout();
-                    if (Workspace.ActualWidth < width - 230 || Workspace.ActualHeight < height - 160 ||
+                    if (Workspace.ActualWidth < Shell.ActualWidth - 210 || Workspace.ActualHeight < Shell.ActualHeight - 112 ||
                         ((destination is Page.Analyze or Page.Compare) &&
                             (!DetailPanel.IsVisible || Results.ActualWidth < 285 || ResultTitle.ActualWidth < 45)))
-                        throw new InvalidOperationException($"Workspace content did not fit in {destination} at {width}×{height} ({theme}).");
-                    await CaptureWorkspaceAsync(screenshots, $"review-{width}x{height}-{theme}-{destination}");
+                        throw new InvalidOperationException($"Layout {destination} {theme}: client {Shell.ActualWidth:N0}x{Shell.ActualHeight:N0}, workspace {Workspace.ActualWidth:N0}x{Workspace.ActualHeight:N0}, results width {Results.ActualWidth:N0}.");
+                    await CaptureWorkspaceAsync(screenshots,
+                        $"review-{size}-{Shell.ActualWidth:0}x{Shell.ActualHeight:0}-{theme}-{destination}");
                 }
             }
         }
@@ -304,7 +313,8 @@ public partial class MainWindow
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = File.Create(Path.Combine(outputDirectory, name + ".png"));
         encoder.Save(stream);
-        if (name.StartsWith("review-1280x720-Dark-") || name is "review-1000x620-Light-Analyze" or "review-1000x620-Light-Settings")
+        if ((name.StartsWith("review-wide-") && name.Contains("-Dark-")) ||
+            (name.StartsWith("review-compact-") && (name.EndsWith("-Light-Analyze") || name.EndsWith("-Light-Settings"))))
         {
             var reduced = new TransformedBitmap(bitmap, new ScaleTransform(0.42, 0.42));
             var preview = new JpegBitmapEncoder { QualityLevel = 64 };

@@ -6,10 +6,12 @@ Diffault reads compiler and runtime logs locally. Compare two builds to identify
 
 The Windows x64 build contains the WPF application, Rust engine, .NET runtime and SQLite. Download `Diffault-win-x64.zip` from the [Diffault Desktop workflow](https://github.com/zaanw/Diffault/actions/workflows/desktop.yml), choose **Extract All**, then run `Diffault.exe` inside the extracted `Diffault` folder. Keep its companion files together. The package works offline on supported Windows x64 systems with normal user permissions.
 
-- **Dashboard** opens logs, resumes the latest comparison, and shows recent results from local history.
-- In **Compare**, select or drop logs in **Before** and **After**, then click **Compare logs**. You can also drop two logs on the window and confirm their order. Select the **Fixed**, **New**, **Existing**, or **More frequent** card to inspect each group.
-- In **Analyze**, browse for a log, drop it, or select **Paste from clipboard**. Search by file, code or message and filter by severity, language or file. Select a diagnostic to open its original log text in the details panel.
-- Export the current report to **JSON** or **SARIF**. Open saved reports from **History**. Settings lets you disable saving future analyses and choose the preferred export format. Choose a local project folder and an editor in **Settings** to enable **Open source** from a selected diagnostic. Existing history stays in `%LOCALAPPDATA%\ErrorHunt\history.db`.
+- **Dashboard** shows the configured project, latest analysis, build delta, and recent reports.
+- In **Compare**, select or drop logs in **Before** and **After**, then click **Compare logs**. Select **Resolved**, **New**, **Persistent**, or **More frequent** to inspect each group.
+- In **Analyze**, open a log, drop it, or choose **Paste from clipboard**. Use the filters or group by source file. Select a row to open the resizable inspector with syntax-highlighted, numbered excerpt lines. **Copy original** copies the complete diagnostic text even when the preview is limited.
+- **History** supports column sorting, search, filtering by type, and opening saved reports. Existing history stays in `%LOCALAPPDATA%\ErrorHunt\history.db`. Choose a local project folder and an editor in **Settings** to enable **Open source**.
+
+Press **Ctrl+K** to search commands and pages, **Ctrl+O** to open a log, **Ctrl+F** to focus the current search, or **Ctrl+1** through **Ctrl+5** to switch pages. The diagnostic table also supports **Ctrl+C** to copy the selected diagnostic. The toolbar exports the current report to JSON or SARIF.
 
 In **Settings → Appearance**, choose **System**, **Light**, or **Dark**, then save. **System** follows the Windows app appearance setting. **Settings → Diagnostics** opens or exports local startup and error codes. The log at `%LOCALAPPDATA%\ErrorHunt\diagnostics.log` omits filenames, raw messages, stack traces, and log contents. If the .NET host cannot load at all, there may be no new log entry. Extract the complete archive again and keep all of its files in the same folder.
 

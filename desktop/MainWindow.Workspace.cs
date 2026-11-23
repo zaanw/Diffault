@@ -115,6 +115,7 @@ public partial class MainWindow
     {
         var selected = Results.SelectedItem as DiagnosticRow;
         visibleRows = rows;
+        DiagnosticFileColumn.Visibility = Visible(GroupByFile.IsChecked != true);
         if (GroupByFile.IsChecked != true || rows.Length == 0)
         {
             Results.ItemsSource = rows;

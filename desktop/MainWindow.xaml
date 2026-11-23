@@ -336,7 +336,8 @@
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="82" ElementStyle="{StaticResource SeverityCell}"/>
                                         <DataGridTextColumn x:Name="StatusColumn" Header="Status" Binding="{Binding Status}" Width="76" ElementStyle="{StaticResource StatusCell}"/>
-                                        <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="0.9*" MinWidth="70" ElementStyle="{StaticResource CodeCell}"/>
+                                        <DataGridTextColumn x:Name="DiagnosticFileColumn" Header="File" Binding="{Binding FileName}"
+                                                            Width="0.9*" MinWidth="70" ElementStyle="{StaticResource CodeCell}"/>
                                         <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="69" ElementStyle="{StaticResource CodeCell}"/>
                                         <DataGridTextColumn Header="Code" Binding="{Binding Item.Code}" Width="76" ElementStyle="{StaticResource CodeCell}"/>
                                         <DataGridTextColumn Header="Message" Binding="{Binding Item.Message}" Width="1.5*" MinWidth="90" ElementStyle="{StaticResource CellText}"/>

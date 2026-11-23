@@ -83,6 +83,10 @@ try
     Require(reopened.LatestComparison()?.Id == entry.Id &&
         reopened.List("СРАВНЕНИЕ").Single().Id == entry.Id &&
         reopened.List("comparison").Single().Id == entry.Id, "History search and latest comparison");
+    Require(reopened.List(kind: AnalysisKind.Unknown, limit: 1).Single().Id == entries[1].Id &&
+        reopened.List("Legacy", kind: AnalysisKind.Comparison).Length == 0 &&
+        reopened.ReadComparisonCounts(entry.Id) == new ComparisonCounts(1, 1, 1),
+        "History type filtering and persisted comparison counts");
     var project = directory.CreateSubdirectory("repo");
     var source = Path.Combine(project.FullName, "Main.cs");
     File.WriteAllText(source, "// source");
