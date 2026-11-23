@@ -78,9 +78,9 @@ public partial class MainWindow
         Require(comparison?.Data is { Fixed.Length: 1, New.Length: 1, Existing.Length: 2 } && Results.Items.Count == 1 &&
             Results.Items[0] is DiagnosticRow { Status: "New" }, $"Comparison failed. {Status.Text}");
         Click(FixedButton);
-        Require(Results.Items.Count == 1 && Results.Items[0] is DiagnosticRow { Status: "Fixed" }, "Fixed filter failed.");
+        Require(Results.Items.Count == 1 && Results.Items[0] is DiagnosticRow { Status: "Resolved" }, "Fixed filter failed.");
         Click(ExistingButton);
-        Require(Results.Items.Count == 2 && Results.Items[0] is DiagnosticRow { Location: "7:5", Status: "Existing" },
+        Require(Results.Items.Count == 2 && Results.Items[0] is DiagnosticRow { Location: "7:5", Status: "Persistent" },
             "Existing filter or location is incorrect.");
         Click(MoreFrequentButton);
         Require(Results.Items.Count == 1 && Results.Items[0] is DiagnosticRow { Item.Count: 2, Item.PreviousCount: 1 },

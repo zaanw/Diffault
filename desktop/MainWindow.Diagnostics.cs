@@ -39,9 +39,9 @@ public partial class MainWindow
             Data = data;
             Kind = kind;
             Label = label;
-            Fixed = data.Fixed.Select(item => new DiagnosticRow(item, "Fixed")).ToArray();
+            Fixed = data.Fixed.Select(item => new DiagnosticRow(item, "Resolved")).ToArray();
             New = data.New.Select(item => new DiagnosticRow(item, "New")).ToArray();
-            Existing = data.Existing.Select(item => new DiagnosticRow(item, "Existing")).ToArray();
+            Existing = data.Existing.Select(item => new DiagnosticRow(item, "Persistent")).ToArray();
             MoreFrequent = Existing.Where(row => row.Item.Count > row.Item.PreviousCount).ToArray();
             Rows = kind == AnalysisKind.Comparison ? [.. Fixed, .. New, .. Existing] : [.. New, .. Existing, .. Fixed];
             Overview = ReportOverview.Summarize(label, data);
@@ -455,6 +455,7 @@ public partial class MainWindow
         DetailMessage.Text = item.Message;
         DetailLocation.Text = string.Join("  ·  ", new[] { item.File, row.Location != "—" ? row.Location : null, $"{row.Occurrences} repeats" }
             .Where(value => !string.IsNullOrEmpty(value)));
+        CopyOriginalButton.IsEnabled = item.Original.Length > 0;
         ShowLogExcerpt(item.Original);
     }
 

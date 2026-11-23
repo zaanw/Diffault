@@ -209,15 +209,14 @@
                                 </StackPanel>
                             </DockPanel>
                         </Border>
-                        <Grid x:Name="AnalyzeSummary" Margin="0,10,0,0" Visibility="Collapsed">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="105"/><ColumnDefinition Width="86"/><ColumnDefinition Width="106"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource Panel}" Padding="10,6" Margin="0,0,6,0"><TextBlock x:Name="AnalyzeTotal"/></Border>
-                            <Border Grid.Column="1" Style="{StaticResource Panel}" Padding="10,6" Margin="0,0,6,0"><TextBlock x:Name="AnalyzeErrors" Foreground="{DynamicResource BrightErrorBrush}"/></Border>
-                            <Border Grid.Column="2" Style="{StaticResource Panel}" Padding="10,6" Margin="0,0,6,0"><TextBlock x:Name="AnalyzeWarnings" Foreground="{DynamicResource WarningBrush}"/></Border>
-                            <Border Grid.Column="3" Style="{StaticResource Panel}" Padding="10,6">
+                        <Border x:Name="AnalyzeSummary" Style="{StaticResource Panel}" Padding="8,5" Margin="0,7,0,0" Visibility="Collapsed">
+                            <DockPanel>
+                                <TextBlock x:Name="AnalyzeTotal" DockPanel.Dock="Left" FontFamily="{StaticResource CodeFont}" Margin="0,0,13,0"/>
+                                <TextBlock x:Name="AnalyzeErrors" DockPanel.Dock="Left" Foreground="{DynamicResource BrightErrorBrush}" Margin="0,0,13,0"/>
+                                <TextBlock x:Name="AnalyzeWarnings" DockPanel.Dock="Left" Foreground="{DynamicResource WarningBrush}" Margin="0,0,13,0"/>
                                 <TextBlock x:Name="DetectedLanguages" Style="{StaticResource Muted}"/>
-                            </Border>
-                        </Grid>
+                            </DockPanel>
+                        </Border>
                     </StackPanel>
 
                     <StackPanel x:Name="CompareActions" Visibility="Collapsed">
@@ -228,7 +227,7 @@
                                     <Button DockPanel.Dock="Right" Content="Browse" Click="PickBefore" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Before" FontSize="14" FontWeight="SemiBold"/>
-                                        <TextBlock x:Name="BeforeFile" Text="Drop the baseline log" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                                        <TextBlock x:Name="BeforeFile" Text="Drop the baseline log" Style="{StaticResource MutedCode}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </DockPanel>
                             </Border>
@@ -238,7 +237,7 @@
                                     <Button DockPanel.Dock="Right" Content="Browse" Click="PickAfter" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="After" FontSize="14" FontWeight="SemiBold"/>
-                                        <TextBlock x:Name="AfterFile" Text="Drop the updated log" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                                        <TextBlock x:Name="AfterFile" Text="Drop the updated log" Style="{StaticResource MutedCode}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </DockPanel>
                             </Border>
@@ -326,7 +325,7 @@
                                     <DataGrid.ContextMenu>
                                         <ContextMenu Opened="UpdateDiagnosticMenu">
                                             <MenuItem Header="Copy diagnostic" Click="CopyDiagnostic" InputGestureText="Ctrl+C"/>
-                                            <MenuItem Header="Copy original log text" Click="CopyOriginal"/>
+                                            <MenuItem x:Name="ContextCopyOriginal" Header="Copy original log text" Click="CopyOriginal"/>
                                             <MenuItem x:Name="ContextOpenSource" Header="Open source" Click="OpenSource"/>
                                         </ContextMenu>
                                     </DataGrid.ContextMenu>
@@ -356,7 +355,7 @@
                         </Border>
                         <GridSplitter x:Name="DetailGrip" Grid.Column="1" Width="6" VerticalAlignment="Stretch"
                                       HorizontalAlignment="Center" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
-                                      ShowsPreview="False" Background="{DynamicResource BorderBrush}" DragCompleted="DetailResizeCompleted"
+                                      ShowsPreview="False" Style="{StaticResource InspectorGrip}" DragCompleted="DetailResizeCompleted"
                                       FocusVisualStyle="{x:Null}" AutomationProperties.Name="Resize the diagnostic inspector"
                                       ToolTip="Drag to resize the inspector, or use the arrow keys when focused." Visibility="Collapsed"/>
                         <Border x:Name="DetailPanel" Grid.Column="2" Style="{StaticResource Panel}" Padding="10"
@@ -383,7 +382,7 @@
                                         <Expander x:Name="LogSection" Header="Log excerpt" IsExpanded="True" Style="{StaticResource SectionExpander}">
                                             <StackPanel Margin="0,5,0,0">
                                                 <DockPanel Margin="0,0,0,4">
-                                                    <Button Content="Copy original" Click="CopyOriginal" Style="{StaticResource QuietButton}"
+                                                    <Button x:Name="CopyOriginalButton" Content="Copy original" Click="CopyOriginal" Style="{StaticResource QuietButton}"
                                                             DockPanel.Dock="Right" Padding="5,1" MinHeight="22"/>
                                                     <TextBlock x:Name="ExcerptStatus" Text="Excerpt lines" Style="{StaticResource Muted}" VerticalAlignment="Center"/>
                                                 </DockPanel>

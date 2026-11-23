@@ -401,7 +401,7 @@
     <Style x:Key="StatusCell" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
         <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
         <Style.Triggers>
-            <DataTrigger Binding="{Binding Status}" Value="Fixed"><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/></DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="Resolved"><Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/></DataTrigger>
             <DataTrigger Binding="{Binding Status}" Value="New"><Setter Property="Foreground" Value="{DynamicResource BrightErrorBrush}"/></DataTrigger>
         </Style.Triggers>
     </Style>
@@ -452,6 +452,28 @@
             <TextBlock Grid.Column="3" Text="{Binding CountLabel}" VerticalAlignment="Center" HorizontalAlignment="Right" Style="{StaticResource Muted}"/>
         </Grid>
     </DataTemplate>
+    <Style x:Key="InspectorGrip" TargetType="GridSplitter">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="GridSplitter">
+                    <Border Background="Transparent">
+                        <Border x:Name="Rule" Width="1" Background="{DynamicResource BorderBrush}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Rule" Property="Width" Value="2"/>
+                            <Setter TargetName="Rule" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Rule" Property="Width" Value="2"/>
+                            <Setter TargetName="Rule" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="MutedCode" TargetType="TextBlock" BasedOn="{StaticResource Muted}">
         <Setter Property="FontFamily" Value="{StaticResource CodeFont}"/>
         <Setter Property="FontSize" Value="11"/>

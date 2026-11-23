@@ -21,14 +21,14 @@ public partial class MainWindow
         @"(?<severity>(?i:\b(?:fatal error|error|warning|warn|note|panic)\b))|(?<code>\b[A-Z][A-Z0-9]{0,7}\d{3,6}\b)|(?<location>:\d+(?::\d+)?\b)",
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
-    private double inspectorWidth = 308;
+    private double inspectorWidth = 274;
     private bool sidebarCollapsed;
     private DiagnosticRow[] visibleRows = [];
 
     private void ToggleSidebar(object sender, RoutedEventArgs e)
     {
         sidebarCollapsed = !sidebarCollapsed;
-        SidebarColumn.Width = new GridLength(sidebarCollapsed ? 46 : 152);
+        SidebarColumn.Width = new GridLength(sidebarCollapsed ? 50 : 152);
         BrandName.Visibility = Visible(!sidebarCollapsed);
         foreach (var button in new[] { DashboardNav, AnalyzeNav, CompareNav, HistoryNav, SettingsNav })
         {
@@ -220,6 +220,7 @@ public partial class MainWindow
         var selected = Results.SelectedItem is DiagnosticRow;
         foreach (var item in menu.Items.OfType<MenuItem>()) item.IsEnabled = selected;
         ContextOpenSource.IsEnabled = selected && HeaderSource.IsVisible && !busy;
+        ContextCopyOriginal.IsEnabled = Results.SelectedItem is DiagnosticRow { Item.Original.Length: > 0 };
         Fade(menu);
     }
 
