@@ -47,14 +47,6 @@ jobs:
             throw 'The tag does not match VERSION.'
           }
           ./.github/scripts/Package-Windows.ps1 -PublishDirectory artifacts/win-x64 -SmokeDirectory artifacts/win-x64-smoke -EditorProbeDirectory checks/bin/Debug/net10.0 -Version $version -ArchivePath "artifacts/release/Diffault-v$version-win-x64.zip" -Screenshots artifacts/workspace-screenshots
-      - name: Dark comparison preview
-        if: github.ref_type != 'tag'
-        shell: pwsh
-        run: ./.github/scripts/Review-Preview.ps1 -Pattern 'review-wide-*-Dark-Compare.jpg'
-      - name: Light analysis preview
-        if: github.ref_type != 'tag'
-        shell: pwsh
-        run: ./.github/scripts/Review-Preview.ps1 -Pattern 'review-wide-*-Light-Analyze.jpg'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -190,3 +182,14 @@ jobs:
             --title "Diffault v0.1.0 — Public Beta ${tag##*.}" --notes-file .github/release-notes.md
           gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets \
             --jq ".isDraft == false and .isPrerelease == true and ([.assets[].name] | sort == [\"Diffault-$tag-win-x64.zip\", \"SHA256SUMS.txt\"])" | grep -Fx true
+      - name: Verify downloads from the public release
+        shell: bash
+        run: |
+          tag="$GITHUB_REF_NAME"
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/$tag"
+          mkdir downloaded
+          cd downloaded
+          for asset in "Diffault-$tag-win-x64.zip" SHA256SUMS.txt; do
+            curl --fail --location --retry 4 --retry-all-errors --retry-delay 2 --max-time 240 -o "$asset" "$base/$asset"
+          done
+          sha256sum --check --strict SHA256SUMS.txt

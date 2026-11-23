@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible problem in Diffault
+title: "[Bug] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Diffault version
+      description: Copy the version from About Diffault.
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version and architecture
+      placeholder: Windows 11 24H2, x64
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the expected result, the observed result and the smallest relevant example.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics
+      description: Remove account names, paths, credentials and project data before attaching text or screenshots.
