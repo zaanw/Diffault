@@ -18,6 +18,8 @@ public partial class MainWindow
     private string? selectedProject;
     private string? selectedEditor;
 
+    private string LocalWorkspaceStatus => $"Local workspace  ·  History {(preferences.KeepHistory ? "on" : "off")}";
+
     private void LoadPreferences(string dataDirectory)
     {
         try
@@ -100,7 +102,7 @@ public partial class MainWindow
             }
             preferences = updated;
             UpdateDashboard();
-            WorkspaceStatus.Text = $"Local workspace  ·  History {(preferences.KeepHistory ? "on" : "off")}";
+            WorkspaceStatus.Text = LocalWorkspaceStatus;
             UpdateReportActions();
             Status.Text = "Settings saved.";
         }

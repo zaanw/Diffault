@@ -108,6 +108,9 @@ If startup fails, check %LOCALAPPDATA%\ErrorHunt\diagnostics.log.
     if (@(Get-ChildItem -LiteralPath $Screenshots -Filter '*.png' -File).Count -lt 6) {
         throw 'The smoke test did not capture the expected workspace views.'
     }
+    if (@(Get-ChildItem -LiteralPath $Screenshots -Filter 'review-*.png' -File).Count -ne 20) {
+        throw 'The smoke test did not capture every page in both themes and window sizes.'
+    }
     Write-Host 'Workspace smoke test passed on the extracted package.'
 } finally {
     Remove-Item -LiteralPath $root -Recurse -Force

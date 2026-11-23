@@ -394,7 +394,7 @@ public partial class MainWindow
         ResultTitle.Text = page == Page.Compare ? CategoryLabel(category) : "Diagnostics";
         WorkspaceStatus.Text = page is Page.Analyze or Page.Compare
             ? (ActiveReport is null ? "No report open" : ResultCount.Text)
-            : page == Page.History ? "" : $"Local workspace  ·  History {(preferences.KeepHistory ? "on" : "off")}";
+            : page == Page.History ? "" : LocalWorkspaceStatus;
         if (rows.Length > 0) return;
 
         var hasReport = ActiveReport is not null;

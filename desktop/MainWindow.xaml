@@ -333,14 +333,14 @@
                                         <GroupStyle ContainerStyle="{StaticResource FileGroup}"/>
                                     </DataGrid.GroupStyle>
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="82" ElementStyle="{StaticResource SeverityCell}"/>
-                                        <DataGridTextColumn x:Name="StatusColumn" Header="Status" Binding="{Binding Status}" Width="76" ElementStyle="{StaticResource StatusCell}"/>
+                                        <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="70" ElementStyle="{StaticResource SeverityCell}"/>
+                                        <DataGridTextColumn x:Name="StatusColumn" Header="Status" Binding="{Binding Status}" Width="72" ElementStyle="{StaticResource StatusCell}"/>
                                         <DataGridTextColumn x:Name="DiagnosticFileColumn" Header="File" Binding="{Binding FileName}"
                                                             Width="0.9*" MinWidth="70" ElementStyle="{StaticResource CodeCell}"/>
-                                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="69" ElementStyle="{StaticResource CodeCell}"/>
-                                        <DataGridTextColumn Header="Code" Binding="{Binding Item.Code}" Width="76" ElementStyle="{StaticResource CodeCell}"/>
+                                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="60" ElementStyle="{StaticResource CodeCell}"/>
+                                        <DataGridTextColumn Header="Code" Binding="{Binding Item.Code}" Width="68" ElementStyle="{StaticResource CodeCell}"/>
                                         <DataGridTextColumn Header="Message" Binding="{Binding Item.Message}" Width="1.5*" MinWidth="90" ElementStyle="{StaticResource CellText}"/>
-                                        <DataGridTextColumn Header="Repeats" Binding="{Binding Occurrences}" SortMemberPath="Item.Count" Width="85" ElementStyle="{StaticResource CodeCell}"/>
+                                        <DataGridTextColumn Header="Repeats" Binding="{Binding Occurrences}" SortMemberPath="Item.Count" Width="68" ElementStyle="{StaticResource CodeCell}"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                                 <StackPanel x:Name="DiagnosticEmpty" Grid.Row="1" Margin="15,10" VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -500,8 +500,8 @@
                             </Expander>
                         </Border>
                         <Button x:Name="SaveSettingsButton" Content="Save settings" Style="{StaticResource PrimaryButton}" Click="SaveSettings" HorizontalAlignment="Left"/>
-                        <Border Style="{StaticResource Panel}" Margin="0,16,0,0">
-                            <Expander Header="Diagnostics" IsExpanded="True" Style="{StaticResource SectionExpander}">
+                        <Border Style="{StaticResource Panel}" Margin="0,11,0,0">
+                            <Expander Header="Diagnostics" Style="{StaticResource SectionExpander}">
                             <StackPanel Margin="0,3,0,1">
                                 <TextBlock Text="Review local startup and error codes. Diagnostic logs omit filenames and input content."
                                            Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,11"/>

@@ -57,6 +57,8 @@ public partial class MainWindow : Window
         initialized = true;
         Navigate(Page.Dashboard);
         LoadPreferences(dataDirectory);
+        WorkspaceStatus.Text = LocalWorkspaceStatus;
+        UpdateDashboard();
         StartAppearance();
         Loaded += async (_, _) => await RefreshDashboardAsync();
     }

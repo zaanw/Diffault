@@ -480,6 +480,7 @@
     </Style>
 
     <Style x:Key="DisclosureToggle" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
@@ -490,7 +491,8 @@
                                   Width="11" Height="11" Margin="0,0,6,0" RenderTransformOrigin="0.5,0.5">
                                 <Path.RenderTransform><RotateTransform Angle="-90"/></Path.RenderTransform>
                             </Path>
-                            <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                            <ContentPresenter x:Name="Label" VerticalAlignment="Center" RecognizesAccessKey="True"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -519,6 +521,7 @@
                     <DockPanel x:Name="Disclosure" Tag="{DynamicResource {x:Static SystemParameters.ClientAreaAnimationKey}}">
                         <ToggleButton x:Name="HeaderToggle" DockPanel.Dock="Top" FontWeight="SemiBold"
                                       Style="{StaticResource DisclosureToggle}" Content="{TemplateBinding Header}"
+                                      Foreground="{TemplateBinding Foreground}"
                                       ContentTemplate="{TemplateBinding HeaderTemplate}"
                                       IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"/>
                         <ContentPresenter x:Name="SectionContent" ContentSource="Content" Visibility="Collapsed"/>

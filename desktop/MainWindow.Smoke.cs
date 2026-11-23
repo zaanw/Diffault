@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -55,6 +56,18 @@ public partial class MainWindow
             "The diagnostic details or source action state is incorrect.");
         Require(Original.Document.Blocks.FirstBlock is Paragraph excerpt &&
             excerpt.Inlines.FirstInline is Run { Text: "  1  " }, "The log excerpt has no line numbers.");
+        var originalDark = appliedDark == true;
+        ApplyAppearance(Appearance.Dark);
+        Shell.UpdateLayout();
+        var logToggle = (ToggleButton)LogSection.Template.FindName("HeaderToggle", LogSection);
+        var logLabel = (ContentPresenter)logToggle.Template.FindName("Label", logToggle);
+        Require(TextElement.GetForeground(logLabel) is SolidColorBrush { Color.R: > 180 },
+            "The log disclosure label is unreadable in dark mode.");
+        logToggle.SetCurrentValue(ToggleButton.IsCheckedProperty, false);
+        Require(!LogSection.IsExpanded && !Original.IsVisible, "The log excerpt did not collapse.");
+        logToggle.SetCurrentValue(ToggleButton.IsCheckedProperty, true);
+        Require(LogSection.IsExpanded && Original.IsVisible, "The log excerpt did not reopen.");
+        ApplyAppearance(originalDark ? Appearance.Dark : Appearance.Light);
         GroupByFile.IsChecked = true;
         GroupByFile.RaiseEvent(new RoutedEventArgs(CheckBox.ClickEvent));
         Require(Results.ItemsSource is ICollectionView { Groups.Count: 1 } &&

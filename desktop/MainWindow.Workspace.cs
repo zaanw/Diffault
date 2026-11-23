@@ -21,7 +21,7 @@ public partial class MainWindow
         @"(?<severity>(?i:\b(?:fatal error|error|warning|warn|note|panic)\b))|(?<code>\b[A-Z][A-Z0-9]{0,7}\d{3,6}\b)|(?<location>:\d+(?::\d+)?\b)",
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
-    private double inspectorWidth = 274;
+    private double inspectorWidth = 250;
     private bool sidebarCollapsed;
     private DiagnosticRow[] visibleRows = [];
 
