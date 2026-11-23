@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -46,7 +47,8 @@ public partial class MainWindow
         Require(Results.Items.Count == 1 && Results.Items[0] is DiagnosticRow { Item.File: "stable.go" },
             "Severity, language and file filters did not combine.");
         Results.SelectedIndex = 0;
-        Require(DetailPanel.IsVisible && Original.Text.Contains("undefined: stable") && !OpenSourceButton.IsVisible,
+        Require(DetailPanel.IsVisible && new TextRange(Original.Document.ContentStart, Original.Document.ContentEnd)
+            .Text.Contains("undefined: stable") && !OpenSourceButton.IsVisible,
             "The diagnostic details or source action state is incorrect.");
         await CaptureWorkspaceAsync(screenshots, "02-analyze");
 

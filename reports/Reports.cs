@@ -82,6 +82,8 @@ public enum AnalysisKind { Unknown, Analysis, Comparison }
 public sealed record HistoryEntry(long Id, string Date, string Label,
     AnalysisKind Kind = AnalysisKind.Unknown, int? DiagnosticCount = null);
 
+public sealed record ComparisonCounts(int Fixed, int New, int Existing);
+
 public sealed class History(string path)
 {
     private SqliteConnection Open()
@@ -125,11 +127,12 @@ public sealed class History(string path)
         transaction.Commit();
     }
 
-    public HistoryEntry[] List(string search = "", int limit = 100) => Find(search, limit, comparisonsOnly: false);
+    public HistoryEntry[] List(string search = "", int limit = 100, AnalysisKind? kind = null)
+        => Find(search, limit, kind);
 
-    public HistoryEntry? LatestComparison() => Find("", 1, comparisonsOnly: true).FirstOrDefault();
+    public HistoryEntry? LatestComparison() => Find("", 1, AnalysisKind.Comparison).FirstOrDefault();
 
-    private HistoryEntry[] Find(string search, int limit, bool comparisonsOnly)
+    private HistoryEntry[] Find(string search, int limit, AnalysisKind? selectedKind)
     {
         using var connection = Open();
         connection.CreateFunction<string, string, bool>("contains_text",
@@ -157,12 +160,12 @@ public sealed class History(string path)
                 LEFT JOIN analysis_details AS d ON a.id = d.analysis_id
             )
             SELECT id, analyzed_at, label, kind, diagnostic_count FROM entries
-            WHERE ($comparisonsOnly = 0 OR kind = 'Comparison')
+            WHERE ($kind IS NULL OR kind = $kind)
                 AND ($search = '' OR contains_text(label, $search)
                      OR contains_text(analyzed_at, $search) OR contains_text(kind, $search))
             ORDER BY id DESC LIMIT $limit
             """;
-        command.Parameters.AddWithValue("$comparisonsOnly", comparisonsOnly);
+        command.Parameters.AddWithValue("$kind", (object?)selectedKind?.ToString() ?? DBNull.Value);
         command.Parameters.AddWithValue("$search", search.Trim());
         command.Parameters.AddWithValue("$limit", limit);
         using var reader = command.ExecuteReader();
@@ -172,6 +175,21 @@ public sealed class History(string path)
                 Enum.TryParse<AnalysisKind>(reader.GetString(3), out var kind) ? kind : AnalysisKind.Unknown,
                 reader.IsDBNull(4) ? null : reader.GetInt32(4)));
         return entries.ToArray();
+    }
+
+    public ComparisonCounts? ReadComparisonCounts(long id)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT coalesce(json_array_length(report_json, '$.fixed'), 0),
+                   coalesce(json_array_length(report_json, '$.new'), 0),
+                   coalesce(json_array_length(report_json, '$.existing'), 0)
+            FROM analyses WHERE id = $id AND json_valid(report_json)
+            """;
+        command.Parameters.AddWithValue("$id", id);
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? new(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2)) : null;
     }
 
     public Report Load(long id)

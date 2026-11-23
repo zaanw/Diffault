@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -24,6 +25,7 @@ public partial class MainWindow : Window
     private ReportOverview? latestOverview;
     private WorkspaceReport? latestComparison;
     private HistoryEntry? latestSavedComparison;
+    private ComparisonCounts? latestSavedCounts;
 
     public MainWindow() : this(LocalDiagnostics.DataDirectory, LocalDiagnostics.Default) { }
 
@@ -88,6 +90,7 @@ public partial class MainWindow : Window
         SettingsPage.Visibility = Visible(destination == Page.Settings);
         Status.Text = busy ? "Reading diagnostics…" : "";
         if (destination == Page.Settings) ShowPreferences();
+        if (destination == Page.Dashboard) UpdateDashboard();
         RefreshDiagnostics();
         Fade(Workspace);
     }
@@ -171,23 +174,28 @@ public partial class MainWindow : Window
     {
         var revision = ++dashboardRevision;
         var needOverview = latestOverview is null;
+        var cachedComparison = latestSavedComparison;
+        var cachedCounts = latestSavedCounts;
         try
         {
             var overview = await Task.Run(() =>
             {
                 var recent = history.List(limit: 5);
                 var comparison = history.LatestComparison();
+                var counts = comparison is null ? null : comparison.Id == cachedComparison?.Id && cachedCounts is not null
+                    ? cachedCounts : history.ReadComparisonCounts(comparison.Id);
                 ReportOverview? summary = null;
                 if (needOverview && recent.FirstOrDefault() is { } latest)
                 {
                     try { summary = ReportOverview.Summarize(latest.Label, history.Load(latest.Id)); }
                     catch (Exception error) { diagnostics.Record("history.summary", error); }
                 }
-                return (recent, comparison, summary);
+                return (recent, comparison, summary, counts);
             });
             if (revision != dashboardRevision) return;
             latestOverview ??= overview.summary;
             latestSavedComparison = overview.comparison;
+            latestSavedCounts = overview.counts;
             RecentList.ItemsSource = overview.recent.Select(entry => new SavedReport(entry)).ToArray();
             var hasEntries = overview.recent.Length > 0;
             DashboardEmptyTitle.Text = "No saved reports yet";
@@ -211,24 +219,42 @@ public partial class MainWindow : Window
         DashboardTotal.Text = latestOverview?.Total.ToString("N0") ?? "—";
         DashboardErrors.Text = latestOverview?.Errors.ToString("N0") ?? "—";
         DashboardWarnings.Text = latestOverview?.Warnings.ToString("N0") ?? "—";
-        DashboardLatest.Visibility = Visible(latestOverview is not null);
-        DashboardLatest.Text = latestOverview is null ? "" : $"Latest report · {latestOverview.Label}";
+        DashboardLatest.Text = latestOverview?.Label ?? "No report yet";
+        DashboardLatest.ToolTip = latestOverview?.Label;
+        DashboardProject.Text = preferences.Project ?? "Not configured";
+        DashboardProject.ToolTip = preferences.Project;
         LatestComparisonButton.Visibility = Visible(latestComparison is not null || latestSavedComparison is not null);
+        var counts = latestComparison is { } live ? new ComparisonCounts(live.Fixed.Length, live.New.Length, live.Existing.Length)
+            : latestSavedCounts;
+        DashboardDeltaLabel.Text = latestComparison?.Label ?? latestSavedComparison?.Label ?? "Compare two builds to see changes.";
+        DashboardDeltaLabel.ToolTip = latestComparison?.Label ?? latestSavedComparison?.Label;
+        DashboardNew.Text = counts?.New.ToString("N0") ?? "—";
+        DashboardResolved.Text = counts?.Fixed.ToString("N0") ?? "—";
+        DashboardPersistent.Text = counts?.Existing.ToString("N0") ?? "—";
     }
 
     private async Task RefreshHistoryAsync()
     {
         var revision = ++historyRevision;
         var search = HistorySearch.Text.Trim();
+        var kind = HistoryKindFilter.SelectedIndex switch
+        {
+            1 => AnalysisKind.Analysis,
+            2 => AnalysisKind.Comparison,
+            3 => AnalysisKind.Unknown,
+            _ => (AnalysisKind?)null
+        };
         try
         {
-            var matches = await Task.Run(() => history.List(search).Select(entry => new SavedReport(entry)).ToArray());
+            var matches = await Task.Run(() => history.List(search, kind: kind).Select(entry => new SavedReport(entry)).ToArray());
             if (revision != historyRevision || page != Page.History) return;
             HistoryList.ItemsSource = matches;
             HistoryEmpty.Visibility = Visible(matches.Length == 0);
             HistoryList.Visibility = Visible(matches.Length != 0);
-            HistoryEmptyTitle.Text = search.Length == 0 ? "No saved reports" : "No matching reports";
-            HistoryEmptyBody.Text = search.Length == 0
+            WorkspaceStatus.Text = $"{matches.Length:N0} saved reports";
+            var unfiltered = search.Length == 0 && kind is null;
+            HistoryEmptyTitle.Text = unfiltered ? "No saved reports" : "No matching reports";
+            HistoryEmptyBody.Text = unfiltered
                 ? "Reports appear here when saving history is enabled."
                 : "Try a different report name, date or type.";
         }
@@ -243,10 +269,18 @@ public partial class MainWindow : Window
         }
     }
 
+    private void HistoryFilterChanged(object sender, SelectionChangedEventArgs e) => QueueHistoryRefresh();
+
     private void HistorySearchChanged(object sender, TextChangedEventArgs e)
     {
         if (!initialized) return;
         HistorySearchHint.Visibility = Visible(HistorySearch.Text.Length == 0);
+        QueueHistoryRefresh();
+    }
+
+    private void QueueHistoryRefresh()
+    {
+        if (!initialized) return;
         historyRevision++;
         historyTimer.Stop();
         historyTimer.Start();
@@ -262,7 +296,7 @@ public partial class MainWindow : Window
     private WorkspaceReport ReadHistory(HistoryEntry entry) =>
         new(history.Load(entry.Id), entry.Kind, entry.Label);
 
-    private async Task RestoreHistoryAsync(ListBox list)
+    private async Task RestoreHistoryAsync(Selector list)
     {
         if (list.SelectedItem is SavedReport selected) await RestoreHistoryAsync(selected.Entry);
     }
@@ -309,14 +343,14 @@ public partial class MainWindow : Window
 
     private async void OpenHistory(object sender, MouseButtonEventArgs e)
     {
-        if (e.OriginalSource is DependencyObject target && sender is ListBox list &&
-            ItemsControl.ContainerFromElement(list, target) is ListBoxItem)
+        if (e.OriginalSource is DependencyObject target && sender is Selector list &&
+            ItemsControl.ContainerFromElement(list, target) is ListBoxItem or DataGridRow)
             await RestoreHistoryAsync(list);
     }
 
     private async void OpenHistoryWithKeyboard(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || sender is not ListBox list) return;
+        if (e.Key != Key.Enter || sender is not Selector list) return;
         e.Handled = true;
         await RestoreHistoryAsync(list);
     }

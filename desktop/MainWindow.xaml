@@ -3,71 +3,75 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Diffault" Width="1220" Height="710" MinWidth="850" MinHeight="525"
         WindowStartupLocation="CenterScreen" Background="{DynamicResource CanvasBrush}"
-        Foreground="{DynamicResource TextBrush}" FontFamily="{StaticResource WorkspaceFont}" FontSize="13"
+        Foreground="{DynamicResource TextBrush}" FontFamily="{StaticResource WorkspaceFont}" FontSize="12.5"
         UseLayoutRounding="True" SnapsToDevicePixels="True" AllowDrop="True"
-        PreviewDragOver="PreviewLogDrag" Drop="DropLogs">
+        PreviewDragOver="PreviewLogDrag" Drop="DropLogs" PreviewKeyDown="WorkspaceKeyDown">
     <Grid x:Name="Shell" Background="{DynamicResource CanvasBrush}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="176"/>
+            <ColumnDefinition x:Name="SidebarColumn" Width="152"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="0,0,1,0" Padding="13,19,13,16">
+                BorderThickness="0,0,1,0" Padding="8,11,8,8">
             <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="7,0,0,27">
-                    <Border Width="34" Height="34" CornerRadius="9" Background="{DynamicResource PrimaryBrush}">
-                        <Path Style="{StaticResource Icon}" Data="{StaticResource LogoIcon}" Stroke="{DynamicResource PrimaryTextBrush}" Width="21" Height="21"/>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="3,0,0,15">
+                    <Border Width="28" Height="28" CornerRadius="5" Background="{DynamicResource PrimaryBrush}">
+                        <Path Style="{StaticResource Icon}" Data="{StaticResource LogoIcon}" Stroke="{DynamicResource PrimaryTextBrush}" Width="16" Height="16"/>
                     </Border>
-                    <TextBlock Text="Diffault" FontSize="20" FontWeight="SemiBold" Margin="9,0,0,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="BrandName" Text="Diffault" FontSize="16" FontWeight="SemiBold" Margin="9,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Top">
-                    <Button x:Name="DashboardNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="Dashboard">
+                    <Button x:Name="DashboardNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="Dashboard" ToolTip="Dashboard (Ctrl+1)">
                         <StackPanel Orientation="Horizontal">
                             <Path Style="{StaticResource Icon}" Data="{StaticResource DashboardIcon}" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                             <TextBlock Text="Dashboard" Margin="10,0,0,0"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="AnalyzeNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="Analyze">
+                    <Button x:Name="AnalyzeNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="Analyze" ToolTip="Analyze (Ctrl+2)">
                         <StackPanel Orientation="Horizontal">
                             <Path Style="{StaticResource Icon}" Data="{StaticResource AnalyzeIcon}" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                             <TextBlock Text="Analyze" Margin="10,0,0,0"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="CompareNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="Compare">
+                    <Button x:Name="CompareNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="Compare" ToolTip="Compare (Ctrl+3)">
                         <StackPanel Orientation="Horizontal">
                             <Path Style="{StaticResource Icon}" Data="{StaticResource CompareIcon}" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                             <TextBlock Text="Compare" Margin="10,0,0,0"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="HistoryNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="History">
+                    <Button x:Name="HistoryNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="History" ToolTip="History (Ctrl+4)">
                         <StackPanel Orientation="Horizontal">
                             <Path Style="{StaticResource Icon}" Data="{StaticResource HistoryIcon}" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                             <TextBlock Text="History" Margin="10,0,0,0"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="SettingsNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="Settings">
+                    <Button x:Name="SettingsNav" Style="{StaticResource NavButton}" Click="NavigateClicked" AutomationProperties.Name="Settings" ToolTip="Settings (Ctrl+5)">
                         <StackPanel Orientation="Horizontal">
                             <Path Style="{StaticResource Icon}" Data="{StaticResource SettingsIcon}" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                             <TextBlock Text="Settings" Margin="10,0,0,0"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
-                <StackPanel DockPanel.Dock="Bottom" Margin="7,0,0,0" Orientation="Horizontal">
-                    <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Text="Local workspace" Style="{StaticResource Muted}" Margin="8,0,0,0" FontSize="11"/>
-                </StackPanel>
+                <Button x:Name="ToggleSidebarButton" DockPanel.Dock="Bottom" Style="{StaticResource QuietButton}"
+                        Click="ToggleSidebar" ToolTip="Collapse navigation" AutomationProperties.Name="Collapse navigation"
+                        HorizontalAlignment="Left" Padding="7,4">
+                    <Path Style="{StaticResource Icon}" Data="{StaticResource SidebarIcon}"/>
+                </Button>
             </DockPanel>
         </Border>
 
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="64"/>
+                <RowDefinition Height="52"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="29"/>
+                <RowDefinition Height="26"/>
             </Grid.RowDefinitions>
-            <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="22,0">
+            <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,0">
                 <DockPanel LastChildFill="True">
+                    <Button DockPanel.Dock="Right" Content="Commands   Ctrl+K" Click="OpenCommands"
+                            Style="{StaticResource QuietButton}" VerticalAlignment="Center" Margin="6,0,0,0"
+                            ToolTip="Search actions and pages (Ctrl+K)"/>
                     <StackPanel x:Name="HeaderActions" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
                         <Button x:Name="HeaderSource" Content="Open source" Click="OpenSource" Margin="0,0,8,0"/>
                         <Button x:Name="HeaderExport" Content="Export" Click="OpenExportMenu" Style="{StaticResource PrimaryButton}">
@@ -90,79 +94,96 @@
                         </StackPanel>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock x:Name="TitleText" FontSize="24" FontWeight="SemiBold" AutomationProperties.HeadingLevel="Level1"/>
+                        <TextBlock x:Name="TitleText" FontSize="18" FontWeight="SemiBold" AutomationProperties.HeadingLevel="Level1"/>
                         <TextBlock x:Name="PageSubtitle" Style="{StaticResource Muted}" FontSize="11" Margin="0,2,0,0"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
 
-            <Grid x:Name="Workspace" Grid.Row="1" Margin="21,17,21,8">
+            <Grid x:Name="Workspace" Grid.Row="1" Margin="14,12,14,7">
 
                 <ScrollViewer x:Name="DashboardPage" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
-                        <Border Style="{StaticResource Card}" Padding="20,16" Background="{DynamicResource PanelBrush}">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="118"/></Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource Panel}" Padding="12,10">
+                            <DockPanel>
+                                <WrapPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <Button Content="Analyze log…" Style="{StaticResource PrimaryButton}" Click="OpenLog" ToolTip="Open a build log (Ctrl+O)" Margin="0,0,6,0"/>
+                                    <Button Content="Compare builds" Click="GoToCompare"/>
+                                </WrapPanel>
                                 <StackPanel>
-                                    <TextBlock Text="Welcome to Diffault" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                    <TextBlock Text="Inspect build diagnostics and see what changed between two runs."
-                                               Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,13"/>
-                                    <WrapPanel>
-                                        <Button Content="Analyze a log" Style="{StaticResource PrimaryButton}" Click="OpenLog" Margin="0,0,8,4"/>
-                                        <Button Content="Compare builds" Click="GoToCompare" Margin="0,0,0,4"/>
-                                    </WrapPanel>
+                                    <TextBlock Text="Project folder" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="DashboardProject" Text="Not configured" Style="{StaticResource MutedCode}"
+                                               Margin="0,3,0,0"/>
                                 </StackPanel>
-                                <Border Grid.Column="1" Width="90" Height="90" CornerRadius="22" HorizontalAlignment="Right"
-                                        Background="{DynamicResource AccentSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                    <Path Style="{StaticResource Icon}" Data="{StaticResource LogoIcon}" Stroke="{DynamicResource AccentTextBrush}" Width="48" Height="48"/>
-                                </Border>
-                            </Grid>
+                            </DockPanel>
                         </Border>
 
-                        <Grid Margin="0,12,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource Card}" Padding="13,9" Margin="0,0,6,0">
+                        <Grid Margin="0,9,0,9">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource Panel}" Margin="0,0,5,0" Padding="12,10">
                                 <StackPanel>
-                                    <TextBlock Text="Latest diagnostics" Style="{StaticResource Muted}"/>
-                                    <TextBlock x:Name="DashboardTotal" Text="—" Style="{StaticResource MetricValue}"/>
+                                    <TextBlock Text="Latest analysis" Style="{StaticResource SectionTitle}"/>
+                                    <TextBlock x:Name="DashboardLatest" Text="No report yet" Style="{StaticResource MutedCode}" Margin="0,3,0,9"/>
+                                    <UniformGrid Columns="3">
+                                        <StackPanel>
+                                            <TextBlock Text="Diagnostics" Style="{StaticResource Muted}"/>
+                                            <TextBlock x:Name="DashboardTotal" Text="—" Style="{StaticResource MetricValue}"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="Errors" Style="{StaticResource Muted}"/>
+                                            <TextBlock x:Name="DashboardErrors" Text="—" Style="{StaticResource MetricValue}" Foreground="{DynamicResource BrightErrorBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="Warnings" Style="{StaticResource Muted}"/>
+                                            <TextBlock x:Name="DashboardWarnings" Text="—" Style="{StaticResource MetricValue}" Foreground="{DynamicResource WarningBrush}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Column="1" Style="{StaticResource Card}" Padding="13,9" Margin="6,0">
+                            <Border Grid.Column="1" Style="{StaticResource Panel}" Margin="5,0,0,0" Padding="12,10">
                                 <StackPanel>
-                                    <TextBlock Text="Errors" Style="{StaticResource Muted}"/>
-                                    <TextBlock x:Name="DashboardErrors" Text="—" Style="{StaticResource MetricValue}" Foreground="{DynamicResource BrightErrorBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Grid.Column="2" Style="{StaticResource Card}" Padding="13,9" Margin="6,0,0,0">
-                                <StackPanel>
-                                    <TextBlock Text="Warnings" Style="{StaticResource Muted}"/>
-                                    <TextBlock x:Name="DashboardWarnings" Text="—" Style="{StaticResource MetricValue}" Foreground="{DynamicResource WarningBrush}"/>
+                                    <DockPanel>
+                                        <Button x:Name="LatestComparisonButton" DockPanel.Dock="Right" Content="Open comparison"
+                                                Style="{StaticResource QuietButton}" Click="OpenLatestComparison" Visibility="Collapsed"
+                                                Padding="6,1" MinHeight="22" Margin="4,-2,-3,0"/>
+                                        <TextBlock Text="Latest build delta" Style="{StaticResource SectionTitle}"/>
+                                    </DockPanel>
+                                    <TextBlock x:Name="DashboardDeltaLabel" Text="Compare two builds to see changes." Style="{StaticResource MutedCode}"
+                                               Margin="0,3,0,9"/>
+                                    <UniformGrid Columns="3">
+                                        <StackPanel>
+                                            <TextBlock Text="New" Style="{StaticResource Muted}"/>
+                                            <TextBlock x:Name="DashboardNew" Text="—" Style="{StaticResource MetricValue}" Foreground="{DynamicResource BrightErrorBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="Resolved" Style="{StaticResource Muted}"/>
+                                            <TextBlock x:Name="DashboardResolved" Text="—" Style="{StaticResource MetricValue}" Foreground="{DynamicResource SuccessBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="Persistent" Style="{StaticResource Muted}"/>
+                                            <TextBlock x:Name="DashboardPersistent" Text="—" Style="{StaticResource MetricValue}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
                                 </StackPanel>
                             </Border>
                         </Grid>
 
-                        <Border Style="{StaticResource Panel}" Padding="15,12">
+                        <Border Style="{StaticResource Panel}" Padding="11,8">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,5">
-                                    <Button x:Name="LatestComparisonButton" DockPanel.Dock="Right" Content="Latest comparison"
-                                            Style="{StaticResource QuietButton}" Click="OpenLatestComparison" Visibility="Collapsed"/>
-                                    <TextBlock Text="Recent analyses" Style="{StaticResource SectionTitle}" VerticalAlignment="Center"/>
+                                    <Button Content="All reports" DockPanel.Dock="Right" Click="GoToHistory"
+                                            Style="{StaticResource QuietButton}" MinHeight="25"/>
+                                    <TextBlock Text="Recent reports" Style="{StaticResource SectionTitle}" VerticalAlignment="Center"/>
                                 </DockPanel>
-                                <TextBlock x:Name="DashboardLatest" Visibility="Collapsed" Style="{StaticResource Muted}" Margin="0,1,0,7"/>
-                                <StackPanel x:Name="DashboardEmpty" Margin="0,8,0,5">
+                                <StackPanel x:Name="DashboardEmpty" Margin="0,7,0,7">
                                     <TextBlock x:Name="DashboardEmptyTitle" Text="No saved reports yet" FontWeight="SemiBold"/>
-                                    <TextBlock x:Name="DashboardEmptyDetail" Text="Analyze a build log to start your history." Style="{StaticResource Muted}" Margin="0,3,0,9"/>
-                                    <Button Content="Analyze a log" Click="OpenLog" Style="{StaticResource QuietButton}" HorizontalAlignment="Left"/>
+                                    <TextBlock x:Name="DashboardEmptyDetail" Text="Analyze a build log to start your history." Style="{StaticResource Muted}" Margin="0,3,0,0"/>
                                 </StackPanel>
-                                <ListBox x:Name="RecentList" ItemTemplate="{StaticResource HistoryEntry}" MaxHeight="155"
-                                         AutomationProperties.Name="Recent analyses" SelectionChanged="HistorySelectionChanged" MouseDoubleClick="OpenHistory" KeyDown="OpenHistoryWithKeyboard"/>
-                                <DockPanel x:Name="RecentActions" LastChildFill="False" Visibility="Collapsed" Margin="0,6,0,0">
-                                    <Button Content="View history" DockPanel.Dock="Right" Click="GoToHistory" Style="{StaticResource QuietButton}"/>
-                                    <Button x:Name="OpenRecentButton" Content="Open report" Click="OpenSelectedHistory"
-                                            IsEnabled="False"/>
-                                </DockPanel>
+                                <ListBox x:Name="RecentList" ItemTemplate="{StaticResource HistoryEntry}" MaxHeight="210"
+                                         AutomationProperties.Name="Recent reports" SelectionChanged="HistorySelectionChanged" MouseDoubleClick="OpenHistory" KeyDown="OpenHistoryWithKeyboard"/>
+                                <StackPanel x:Name="RecentActions" Visibility="Collapsed" Margin="0,5,0,0" Orientation="Horizontal">
+                                    <Button x:Name="OpenRecentButton" Content="Open report" Click="OpenSelectedHistory" IsEnabled="False"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -173,17 +194,17 @@
                         <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <StackPanel x:Name="AnalyzeActions">
-                        <Border Style="{StaticResource DropCard}" Padding="13,10" Drop="DropAnalyze">
+                        <Border Style="{StaticResource DropCard}" Padding="9,6" Drop="DropAnalyze">
                             <DockPanel LastChildFill="True">
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
                                     <Button Content="Paste from clipboard" Click="AnalyzeClipboard" Margin="0,0,8,0"/>
                                     <Button Content="Browse files" Style="{StaticResource PrimaryButton}" Click="OpenLog"/>
                                 </StackPanel>
-                                <Border DockPanel.Dock="Left" Width="38" Height="38" CornerRadius="8" Background="{DynamicResource AccentSurfaceBrush}" Margin="0,0,11,0">
+                                <Border DockPanel.Dock="Left" Width="27" Height="27" CornerRadius="4" Background="{DynamicResource AccentSurfaceBrush}" Margin="0,0,11,0">
                                     <Path Style="{StaticResource Icon}" Data="{StaticResource UploadIcon}" Stroke="{DynamicResource AccentTextBrush}"/>
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Drop a build log" FontSize="15" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Drop a build log" FontSize="13" FontWeight="SemiBold"/>
                                     <TextBlock Text=".log, .txt, .out or .err" Style="{StaticResource Muted}" FontSize="11" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </DockPanel>
@@ -229,38 +250,47 @@
                             </StackPanel>
                             <TextBlock x:Name="CompareHint" Text="Select the baseline and updated log." Style="{StaticResource Muted}" VerticalAlignment="Center"/>
                         </DockPanel>
-                        <Grid x:Name="CompareMetrics" Visibility="Collapsed">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition x:Name="FrequencyColumn" Width="*"/></Grid.ColumnDefinitions>
-                            <Button x:Name="FixedButton" Style="{StaticResource MetricButton}" Background="{DynamicResource SuccessSurfaceBrush}" Click="ShowFixed" Margin="0,0,5,0" AutomationProperties.Name="Fixed diagnostics">
-                                <DockPanel>
-                                    <Path DockPanel.Dock="Right" Style="{StaticResource Icon}" Data="{StaticResource FixedIcon}" Stroke="{DynamicResource SuccessBrush}"/>
-                                    <StackPanel><TextBlock Text="Fixed" Foreground="{DynamicResource SuccessBrush}"/><TextBlock x:Name="FixedCount" Style="{StaticResource MetricValue}"/></StackPanel>
-                                </DockPanel>
-                            </Button>
-                            <Button x:Name="NewButton" Grid.Column="1" Style="{StaticResource MetricButton}" Background="{DynamicResource ErrorSurfaceBrush}" Click="ShowNew" Margin="5,0" AutomationProperties.Name="New diagnostics">
-                                <DockPanel>
-                                    <Path DockPanel.Dock="Right" Style="{StaticResource Icon}" Data="{StaticResource NewIcon}" Stroke="{DynamicResource ErrorBrush}"/>
-                                    <StackPanel><TextBlock Text="New" Foreground="{DynamicResource BrightErrorBrush}"/><TextBlock x:Name="NewCount" Style="{StaticResource MetricValue}"/></StackPanel>
-                                </DockPanel>
-                            </Button>
-                            <Button x:Name="ExistingButton" Grid.Column="2" Style="{StaticResource MetricButton}" Background="{DynamicResource WarningSurfaceBrush}" Click="ShowExisting" Margin="5,0" AutomationProperties.Name="Existing diagnostics">
-                                <DockPanel>
-                                    <Path DockPanel.Dock="Right" Style="{StaticResource Icon}" Data="{StaticResource ExistingIcon}" Stroke="{DynamicResource WarningBrush}"/>
-                                    <StackPanel><TextBlock Text="Existing" Foreground="{DynamicResource WarningBrush}"/><TextBlock x:Name="ExistingCount" Style="{StaticResource MetricValue}"/></StackPanel>
-                                </DockPanel>
-                            </Button>
-                            <Button x:Name="MoreFrequentButton" Grid.Column="3" Style="{StaticResource MetricButton}" Click="ShowMoreFrequent" Margin="5,0,0,0" AutomationProperties.Name="More frequent diagnostics">
-                                <DockPanel>
-                                    <Path DockPanel.Dock="Right" Style="{StaticResource Icon}" Data="{StaticResource TrendIcon}" Stroke="{DynamicResource AccentTextBrush}"/>
-                                    <StackPanel><TextBlock Text="More frequent" Foreground="{DynamicResource AccentTextBrush}"/><TextBlock x:Name="MoreFrequentCount" Style="{StaticResource MetricValue}"/></StackPanel>
-                                </DockPanel>
-                            </Button>
-                        </Grid>
+                        <Border x:Name="CompareMetrics" Style="{StaticResource Panel}" Padding="3" Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    <ColumnDefinition x:Name="FrequencyColumn" Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="FixedButton" Style="{StaticResource DiffTab}" Click="ShowFixed" AutomationProperties.Name="Resolved issues">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Style="{StaticResource Icon}" Data="{StaticResource FixedIcon}" Stroke="{DynamicResource SuccessBrush}" Width="13" Height="13"/>
+                                        <TextBlock Text="Resolved" Margin="6,0,7,0"/>
+                                        <TextBlock x:Name="FixedCount" Foreground="{DynamicResource SuccessBrush}" FontFamily="{StaticResource CodeFont}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="NewButton" Grid.Column="1" Style="{StaticResource DiffTab}" Click="ShowNew" AutomationProperties.Name="New issues">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Style="{StaticResource Icon}" Data="{StaticResource NewIcon}" Stroke="{DynamicResource ErrorBrush}" Width="13" Height="13"/>
+                                        <TextBlock Text="New" Margin="6,0,7,0"/>
+                                        <TextBlock x:Name="NewCount" Foreground="{DynamicResource BrightErrorBrush}" FontFamily="{StaticResource CodeFont}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="ExistingButton" Grid.Column="2" Style="{StaticResource DiffTab}" Click="ShowExisting" AutomationProperties.Name="Persistent issues">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Style="{StaticResource Icon}" Data="{StaticResource ExistingIcon}" Width="13" Height="13"/>
+                                        <TextBlock Text="Persistent" Margin="6,0,7,0"/>
+                                        <TextBlock x:Name="ExistingCount" Foreground="{DynamicResource MutedBrush}" FontFamily="{StaticResource CodeFont}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="MoreFrequentButton" Grid.Column="3" Style="{StaticResource DiffTab}" Click="ShowMoreFrequent" AutomationProperties.Name="More frequent issues">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Style="{StaticResource Icon}" Data="{StaticResource TrendIcon}" Stroke="{DynamicResource WarningBrush}" Width="13" Height="13"/>
+                                        <TextBlock Text="More frequent" Margin="6,0,7,0"/>
+                                        <TextBlock x:Name="MoreFrequentCount" Foreground="{DynamicResource WarningBrush}" FontFamily="{StaticResource CodeFont}"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </Border>
                     </StackPanel>
 
-                    <Grid x:Name="Filters" Grid.Row="1" Margin="0,10,0,9" Visibility="Collapsed">
+                    <Grid x:Name="Filters" Grid.Row="1" Margin="0,8,0,7" Visibility="Collapsed">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1.6*"/><ColumnDefinition Width="106"/><ColumnDefinition Width="121"/><ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1.6*"/><ColumnDefinition Width="100"/><ColumnDefinition Width="109"/><ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBox x:Name="Search" AutomationProperties.Name="Search diagnostics" ToolTip="Search file, code or message"
                                  TextChanged="FilterChanged" VerticalContentAlignment="Center" Margin="0,0,7,0" Padding="31,6,9,6"/>
@@ -273,21 +303,40 @@
                         <ComboBox x:Name="FileFilter" Grid.Column="3" AutomationProperties.Name="Filter by file" SelectionChanged="FilterChanged" ToolTip="Filter diagnostics by file"/>
                     </Grid>
 
-                    <Grid Grid.Row="2">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Grid x:Name="DiagnosticPanes" Grid.Row="2" SizeChanged="DiagnosticPanesResized">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="GridColumn" Width="*" MinWidth="300"/>
+                            <ColumnDefinition x:Name="GripColumn" Width="0"/>
+                            <ColumnDefinition x:Name="DetailColumn" Width="0"/>
+                        </Grid.ColumnDefinitions>
                         <Border Style="{StaticResource Panel}" Margin="0,0,0,0" Padding="0" ClipToBounds="True">
                             <Grid>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                                 <DockPanel x:Name="TableHeader" Margin="12,7,12,7" Visibility="Collapsed">
-                                    <TextBlock x:Name="ResultCount" DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Muted}"/>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <CheckBox x:Name="GroupByFile" Content="Group by file" Click="ToggleFileGrouping"
+                                                  ToolTip="Group visible diagnostics by source file" Margin="0,0,12,0"/>
+                                        <TextBlock x:Name="ResultCount" VerticalAlignment="Center" Style="{StaticResource MutedCode}"/>
+                                    </StackPanel>
                                     <TextBlock x:Name="ResultTitle" Text="Diagnostics" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </DockPanel>
                                 <DataGrid x:Name="Results" Grid.Row="1" SelectionChanged="SelectDiagnostic" CanUserSortColumns="True"
-                                          AutomationProperties.Name="Diagnostics" Visibility="Collapsed">
+                                          AutomationProperties.Name="Diagnostics" Visibility="Collapsed" PreviewMouseRightButtonDown="SelectContextRow"
+                                          VirtualizingPanel.IsVirtualizingWhenGrouping="True">
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu Opened="UpdateDiagnosticMenu">
+                                            <MenuItem Header="Copy diagnostic" Click="CopyDiagnostic" InputGestureText="Ctrl+C"/>
+                                            <MenuItem Header="Copy original log text" Click="CopyOriginal"/>
+                                            <MenuItem x:Name="ContextOpenSource" Header="Open source" Click="OpenSource"/>
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
+                                    <DataGrid.GroupStyle>
+                                        <GroupStyle ContainerStyle="{StaticResource FileGroup}"/>
+                                    </DataGrid.GroupStyle>
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="82" ElementStyle="{StaticResource SeverityCell}"/>
                                         <DataGridTextColumn x:Name="StatusColumn" Header="Status" Binding="{Binding Status}" Width="76" ElementStyle="{StaticResource StatusCell}"/>
-                                        <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="0.9*" MinWidth="70" ElementStyle="{StaticResource CellText}"/>
+                                        <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="0.9*" MinWidth="70" ElementStyle="{StaticResource CodeCell}"/>
                                         <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="69" ElementStyle="{StaticResource CodeCell}"/>
                                         <DataGridTextColumn Header="Code" Binding="{Binding Item.Code}" Width="76" ElementStyle="{StaticResource CodeCell}"/>
                                         <DataGridTextColumn Header="Message" Binding="{Binding Item.Message}" Width="1.5*" MinWidth="90" ElementStyle="{StaticResource CellText}"/>
@@ -304,8 +353,13 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <Border x:Name="DetailPanel" Grid.Column="1" Width="258" Style="{StaticResource Panel}" Padding="12"
-                                Margin="10,0,0,0" Visibility="Collapsed">
+                        <GridSplitter x:Name="DetailGrip" Grid.Column="1" Width="6" VerticalAlignment="Stretch"
+                                      HorizontalAlignment="Center" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
+                                      ShowsPreview="False" Background="{DynamicResource BorderBrush}" DragCompleted="DetailResizeCompleted"
+                                      FocusVisualStyle="{x:Null}" AutomationProperties.Name="Resize the diagnostic inspector"
+                                      ToolTip="Drag to resize the inspector, or use the arrow keys when focused." Visibility="Collapsed"/>
+                        <Border x:Name="DetailPanel" Grid.Column="2" Style="{StaticResource Panel}" Padding="10"
+                                Visibility="Collapsed">
                             <Grid>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                                 <DockPanel Margin="0,0,0,8">
@@ -313,17 +367,33 @@
                                             AutomationProperties.Name="Close diagnostic details">
                                         <Path Style="{StaticResource Icon}" Data="{StaticResource CloseIcon}" Width="13" Height="13"/>
                                     </Button>
-                                    <TextBlock Text="Diagnostic details" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Inspector" Style="{StaticResource SectionTitle}" VerticalAlignment="Center"/>
                                 </DockPanel>
                                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                     <StackPanel>
                                         <TextBlock x:Name="DetailSeverity" FontSize="11" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" TextWrapping="Wrap"/>
                                         <TextBlock x:Name="DetailMessage" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,5,0,6"/>
-                                        <TextBlock x:Name="DetailLocation" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                        <Button x:Name="OpenSourceButton" Content="Open source" Click="OpenSource" HorizontalAlignment="Left" Visibility="Collapsed"/>
-                                        <TextBlock Text="Original diagnostic" Style="{StaticResource Muted}" Margin="0,10,0,5"/>
-                                        <TextBox x:Name="Original" IsReadOnly="True" TextWrapping="Wrap" FontFamily="{StaticResource CodeFont}"
-                                                 FontSize="11" AutomationProperties.Name="Original diagnostic"/>
+                                        <TextBlock x:Name="DetailLocation" Style="{StaticResource MutedCode}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                        <WrapPanel Margin="0,0,0,8">
+                                            <Button Content="Copy diagnostic" Click="CopyDiagnostic" Margin="0,0,5,4" Padding="7,3" MinHeight="25"/>
+                                            <Button x:Name="OpenSourceButton" Content="Open source" Click="OpenSource"
+                                                    Visibility="Collapsed" Padding="7,3" MinHeight="25" Margin="0,0,0,4"/>
+                                        </WrapPanel>
+                                        <Expander x:Name="LogSection" Header="Log excerpt" IsExpanded="True" Style="{StaticResource SectionExpander}">
+                                            <StackPanel Margin="0,5,0,0">
+                                                <DockPanel Margin="0,0,0,4">
+                                                    <Button Content="Copy original" Click="CopyOriginal" Style="{StaticResource QuietButton}"
+                                                            DockPanel.Dock="Right" Padding="5,1" MinHeight="22"/>
+                                                    <TextBlock x:Name="ExcerptStatus" Text="Excerpt lines" Style="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                                </DockPanel>
+                                                <RichTextBox x:Name="Original" IsReadOnly="True" IsDocumentEnabled="False" IsUndoEnabled="False"
+                                                             Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                                             Foreground="{DynamicResource TextBrush}" BorderThickness="1"
+                                                             FontFamily="{StaticResource CodeFont}" FontSize="11"
+                                                             MaxHeight="220" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                                             AutomationProperties.Name="Original diagnostic with excerpt line numbers"/>
+                                            </StackPanel>
+                                        </Expander>
                                     </StackPanel>
                                 </ScrollViewer>
                             </Grid>
@@ -336,6 +406,10 @@
                     <DockPanel Margin="0,0,0,10">
                         <Button x:Name="OpenHistoryButton" DockPanel.Dock="Right" Content="Open report" Click="OpenSelectedHistory"
                                 Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" IsEnabled="False"/>
+                        <ComboBox x:Name="HistoryKindFilter" DockPanel.Dock="Right" Width="138" Margin="7,0,0,0" SelectedIndex="0"
+                                  SelectionChanged="HistoryFilterChanged" AutomationProperties.Name="Filter history by report type">
+                            <ComboBoxItem Content="All types"/><ComboBoxItem Content="Analysis"/><ComboBoxItem Content="Comparison"/><ComboBoxItem Content="Saved report"/>
+                        </ComboBox>
                         <Grid>
                             <TextBox x:Name="HistorySearch" AutomationProperties.Name="Search history" TextChanged="HistorySearchChanged"
                                      VerticalContentAlignment="Center" Padding="31,6,9,6"/>
@@ -347,8 +421,23 @@
                     </DockPanel>
                     <Border Grid.Row="1" Style="{StaticResource Panel}" Padding="12">
                         <Grid>
-                            <ListBox x:Name="HistoryList" ItemTemplate="{StaticResource HistoryEntry}" AutomationProperties.Name="Saved reports"
-                                     SelectionChanged="HistorySelectionChanged" MouseDoubleClick="OpenHistory" KeyDown="OpenHistoryWithKeyboard"/>
+                            <DataGrid x:Name="HistoryList" AutomationProperties.Name="Saved reports" SelectionChanged="HistorySelectionChanged"
+                                      MouseDoubleClick="OpenHistory" KeyDown="OpenHistoryWithKeyboard" PreviewMouseRightButtonDown="SelectContextRow">
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu Opened="UpdateHistoryMenu">
+                                        <MenuItem Header="Open report" Click="OpenSelectedHistory"/>
+                                        <MenuItem Header="Copy report name" Click="CopyHistoryName"/>
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Report" Binding="{Binding Label}" Width="*" MinWidth="130" ElementStyle="{StaticResource CellText}"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding KindLabel}" Width="120" ElementStyle="{StaticResource CellText}"/>
+                                    <DataGridTextColumn Header="Diagnostics" Binding="{Binding Entry.DiagnosticCount, TargetNullValue=—}"
+                                                        SortMemberPath="Entry.DiagnosticCount" Width="105" ElementStyle="{StaticResource CodeCell}"/>
+                                    <DataGridTextColumn Header="Saved" Binding="{Binding LocalDate}" SortMemberPath="Entry.Date"
+                                                        Width="170" ElementStyle="{StaticResource CodeCell}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
                             <StackPanel x:Name="HistoryEmpty" Margin="14,6" VerticalAlignment="Center" HorizontalAlignment="Center">
                                 <TextBlock x:Name="HistoryEmptyTitle" Text="No saved reports" FontSize="16" FontWeight="SemiBold" TextAlignment="Center"/>
                                 <TextBlock x:Name="HistoryEmptyBody" Text="Reports appear here when saving history is enabled."
@@ -359,10 +448,10 @@
                 </Grid>
 
                 <ScrollViewer x:Name="SettingsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel MaxWidth="755" HorizontalAlignment="Stretch">
+                    <StackPanel MaxWidth="820" HorizontalAlignment="Left" Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
                         <Border Style="{StaticResource Panel}" Margin="0,0,0,11">
-                            <StackPanel>
-                                <TextBlock Text="Appearance" Style="{StaticResource SectionTitle}"/>
+                            <Expander Header="Appearance" IsExpanded="True" Style="{StaticResource SectionExpander}">
+                            <StackPanel Margin="0,3,0,1">
                                 <DockPanel Margin="0,10,0,0">
                                     <ComboBox x:Name="ThemeSelection" DockPanel.Dock="Right" Width="132"
                                               AutomationProperties.Name="Theme" SelectionChanged="PreviewAppearance">
@@ -371,10 +460,11 @@
                                     <TextBlock Text="Theme" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </DockPanel>
                             </StackPanel>
+                            </Expander>
                         </Border>
                         <Border Style="{StaticResource Panel}" Margin="0,0,0,11">
-                            <StackPanel>
-                                <TextBlock Text="Source files" Style="{StaticResource SectionTitle}"/>
+                            <Expander Header="Source files" IsExpanded="True" Style="{StaticResource SectionExpander}">
+                            <StackPanel Margin="0,3,0,1">
                                 <TextBlock Text="Choose the local folder and editor used by Open source." Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,11"/>
                                 <DockPanel Margin="0,0,0,10">
                                     <Button DockPanel.Dock="Right" Content="Choose folder…" Click="ChooseProject" Margin="8,0,0,0"/>
@@ -394,10 +484,11 @@
                                     </StackPanel>
                                 </DockPanel>
                             </StackPanel>
+                            </Expander>
                         </Border>
                         <Border Style="{StaticResource Panel}" Margin="0,0,0,11">
-                            <StackPanel>
-                                <TextBlock Text="Reports and history" Style="{StaticResource SectionTitle}"/>
+                            <Expander Header="Reports and history" IsExpanded="True" Style="{StaticResource SectionExpander}">
+                            <StackPanel Margin="0,3,0,1">
                                 <DockPanel Margin="0,10,0,10">
                                     <ComboBox x:Name="ExportFormat" DockPanel.Dock="Right" Width="115" AutomationProperties.Name="Preferred export format">
                                         <ComboBoxItem Content="JSON"/><ComboBoxItem Content="SARIF"/>
@@ -406,11 +497,12 @@
                                 </DockPanel>
                                 <CheckBox x:Name="SaveHistory" Content="Save analyses to local history"/>
                             </StackPanel>
+                            </Expander>
                         </Border>
                         <Button x:Name="SaveSettingsButton" Content="Save settings" Style="{StaticResource PrimaryButton}" Click="SaveSettings" HorizontalAlignment="Left"/>
                         <Border Style="{StaticResource Panel}" Margin="0,16,0,0">
-                            <StackPanel>
-                                <TextBlock Text="Diagnostics" Style="{StaticResource SectionTitle}"/>
+                            <Expander Header="Diagnostics" IsExpanded="True" Style="{StaticResource SectionExpander}">
+                            <StackPanel Margin="0,3,0,1">
                                 <TextBlock Text="Review local startup and error codes. Diagnostic logs omit filenames and input content."
                                            Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,11"/>
                                 <WrapPanel>
@@ -418,14 +510,19 @@
                                     <Button Content="Export diagnostic log…" Click="ExportDiagnosticLog"/>
                                 </WrapPanel>
                             </StackPanel>
+                            </Expander>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
 
             <Border Grid.Row="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Background="{DynamicResource PanelBrush}" Padding="21,0">
-                <TextBlock x:Name="Status" Style="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"
-                           AutomationProperties.LiveSetting="Polite" TextTrimming="CharacterEllipsis"/>
+                <DockPanel>
+                    <TextBlock x:Name="WorkspaceStatus" DockPanel.Dock="Right" Style="{StaticResource MutedCode}"
+                               VerticalAlignment="Center" FontSize="11" Margin="12,0,0,0"/>
+                    <TextBlock x:Name="Status" Style="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"
+                               AutomationProperties.LiveSetting="Polite" TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
             </Border>
         </Grid>
     </Grid>

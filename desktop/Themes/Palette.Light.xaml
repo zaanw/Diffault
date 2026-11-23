@@ -6,11 +6,11 @@
     <SolidColorBrush x:Key="BorderBrush" Color="#D3D7DE"/>
     <SolidColorBrush x:Key="TextBrush" Color="#1B1E23"/>
     <SolidColorBrush x:Key="MutedBrush" Color="#545B67"/>
-    <SolidColorBrush x:Key="AccentBrush" Color="#697485"/>
-    <SolidColorBrush x:Key="AccentTextBrush" Color="#394553"/>
-    <SolidColorBrush x:Key="AccentSurfaceBrush" Color="#E9ECF1"/>
-    <SolidColorBrush x:Key="PrimaryBrush" Color="#252A32"/>
-    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FAFBFC"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#387B6E"/>
+    <SolidColorBrush x:Key="AccentTextBrush" Color="#205F53"/>
+    <SolidColorBrush x:Key="AccentSurfaceBrush" Color="#E4F1ED"/>
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#205E51"/>
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FAFFFE"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="#326347"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="#A23C42"/>
     <SolidColorBrush x:Key="WarningBrush" Color="#76521E"/>

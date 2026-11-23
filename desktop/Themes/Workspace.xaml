@@ -5,6 +5,7 @@
     <FontFamily x:Key="CodeFont">Cascadia Mono, Consolas</FontFamily>
 
     <Geometry x:Key="LogoIcon">M 4,5 L 11,5 L 15,9 L 20,9 M 4,12 L 8,12 L 12,16 L 20,16 M 17,6 L 20,9 L 17,12 M 17,13 L 20,16 L 17,19</Geometry>
+    <Geometry x:Key="SidebarIcon">M 3,4 H 21 V 20 H 3 Z M 9,4 V 20</Geometry>
     <Geometry x:Key="DashboardIcon">M 3,3 H 10 V 10 H 3 Z M 14,3 H 21 V 10 H 14 Z M 3,14 H 10 V 21 H 3 Z M 14,14 H 21 V 21 H 14 Z</Geometry>
     <Geometry x:Key="AnalyzeIcon">M 5,3 H 14 L 19,8 V 21 H 5 Z M 14,3 V 8 H 19 M 8,12 H 16 M 8,16 H 14</Geometry>
     <Geometry x:Key="CompareIcon">M 3,8 H 20 M 16,4 L 20,8 L 16,12 M 21,16 H 4 M 8,12 L 4,16 L 8,20</Geometry>
@@ -37,8 +38,8 @@
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="12"/>
-        <Setter Property="Padding" Value="16"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="Padding" Value="11"/>
     </Style>
     <Style x:Key="Panel" TargetType="Border" BasedOn="{StaticResource Card}">
         <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
@@ -48,11 +49,11 @@
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>
     <Style x:Key="SectionTitle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="17"/>
+        <Setter Property="FontSize" Value="14"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style x:Key="MetricValue" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="25"/>
+        <Setter Property="FontSize" Value="20"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Margin" Value="0,2,0,0"/>
     </Style>
@@ -62,8 +63,8 @@
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="13,7"/>
-        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="Padding" Value="9,4"/>
+        <Setter Property="MinHeight" Value="29"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -75,8 +76,8 @@
                     <Grid x:Name="ButtonRoot" Tag="{DynamicResource {x:Static SystemParameters.ClientAreaAnimationKey}}">
                         <Border x:Name="Surface" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8"/>
-                        <Border x:Name="Hover" Background="{DynamicResource HoverOverlayBrush}" Opacity="0" CornerRadius="8"/>
+                                CornerRadius="5"/>
+                        <Border x:Name="Hover" Background="{DynamicResource HoverOverlayBrush}" Opacity="0" CornerRadius="5"/>
                         <ContentPresenter Margin="{TemplateBinding Padding}"
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -129,8 +130,8 @@
     </Style>
     <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
-        <Setter Property="MinHeight" Value="42"/>
-        <Setter Property="Margin" Value="0,0,0,5"/>
+        <Setter Property="MinHeight" Value="33"/>
+        <Setter Property="Margin" Value="0,0,0,2"/>
         <Style.Triggers>
             <Trigger Property="Tag" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}"/>
@@ -139,13 +140,14 @@
             </Trigger>
         </Style.Triggers>
     </Style>
-    <Style x:Key="MetricButton" TargetType="Button" BasedOn="{StaticResource ActionButton}">
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="MinHeight" Value="65"/>
+    <Style x:Key="DiffTab" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="7,4"/>
         <Style.Triggers>
             <Trigger Property="Tag" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -166,12 +168,12 @@
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="10,6"/>
-        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="MinHeight" Value="29"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Border x:Name="Input" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
                         <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
                                       HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
                                       VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
@@ -196,7 +198,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
                     <Border x:Name="Shell" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="1" CornerRadius="8">
+                            BorderThickness="1" CornerRadius="5">
                         <Path Data="{StaticResource ChevronIcon}" Style="{StaticResource Icon}" Width="13" Height="13"
                               HorizontalAlignment="Right" Margin="0,0,8,0"/>
                     </Border>
@@ -213,7 +215,7 @@
         </Setter>
     </Style>
     <Style TargetType="ComboBox">
-        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="MinHeight" Value="29"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
@@ -237,7 +239,7 @@
                         <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
                                PlacementTarget="{Binding ElementName=Input}" AllowsTransparency="True" Focusable="False">
                             <Border MinWidth="{Binding ActualWidth, ElementName=Input}" MaxWidth="440"
-                                    MaxHeight="{TemplateBinding MaxDropDownHeight}" Padding="4" CornerRadius="8"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}" Padding="4" CornerRadius="5"
                                     Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <ScrollViewer CanContentScroll="True" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                     <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
@@ -320,8 +322,8 @@
         <Setter Property="HeadersVisibility" Value="Column"/>
         <Setter Property="RowBackground" Value="{DynamicResource PanelBrush}"/>
         <Setter Property="AlternatingRowBackground" Value="{DynamicResource PanelBrush}"/>
-        <Setter Property="RowHeight" Value="38"/>
-        <Setter Property="ColumnHeaderHeight" Value="36"/>
+        <Setter Property="RowHeight" Value="30"/>
+        <Setter Property="ColumnHeaderHeight" Value="30"/>
         <Setter Property="CanUserAddRows" Value="False"/>
         <Setter Property="CanUserDeleteRows" Value="False"/>
         <Setter Property="IsReadOnly" Value="True"/>
@@ -432,7 +434,7 @@
     </Style>
 
     <DataTemplate x:Key="HistoryEntry">
-        <Grid MinHeight="38">
+        <Grid MinHeight="32">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="32"/>
                 <ColumnDefinition Width="*"/>
@@ -450,4 +452,94 @@
             <TextBlock Grid.Column="3" Text="{Binding CountLabel}" VerticalAlignment="Center" HorizontalAlignment="Right" Style="{StaticResource Muted}"/>
         </Grid>
     </DataTemplate>
+    <Style x:Key="MutedCode" TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+        <Setter Property="FontFamily" Value="{StaticResource CodeFont}"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style x:Key="DisclosureToggle" TargetType="ToggleButton">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Surface" Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
+                            CornerRadius="4" Padding="5,3">
+                        <DockPanel>
+                            <Path DockPanel.Dock="Left" x:Name="Arrow" Data="{StaticResource ChevronIcon}" Style="{StaticResource Icon}"
+                                  Width="11" Height="11" Margin="0,0,6,0" RenderTransformOrigin="0.5,0.5">
+                                <Path.RenderTransform><RotateTransform Angle="-90"/></Path.RenderTransform>
+                            </Path>
+                            <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Arrow" Property="RenderTransform">
+                                <Setter.Value><RotateTransform Angle="0"/></Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Surface" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SectionExpander" TargetType="Expander">
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Expander">
+                    <DockPanel x:Name="Disclosure" Tag="{DynamicResource {x:Static SystemParameters.ClientAreaAnimationKey}}">
+                        <ToggleButton x:Name="HeaderToggle" DockPanel.Dock="Top" FontWeight="SemiBold"
+                                      Style="{StaticResource DisclosureToggle}" Content="{TemplateBinding Header}"
+                                      ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"/>
+                        <ContentPresenter x:Name="SectionContent" ContentSource="Content" Visibility="Collapsed"/>
+                    </DockPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True">
+                            <Setter TargetName="SectionContent" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsExpanded}" Value="True"/>
+                                <Condition Binding="{Binding ElementName=Disclosure, Path=Tag}" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <MultiDataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="SectionContent" Storyboard.TargetProperty="Opacity"
+                                                         From="0.78" To="1" Duration="0:0:0.13" FillBehavior="Stop"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.EnterActions>
+                        </MultiDataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="FileGroup" TargetType="GroupItem">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="GroupItem">
+                    <Expander Style="{StaticResource SectionExpander}" IsExpanded="True">
+                        <Expander.Header>
+                            <DockPanel Margin="1,1,8,1" ToolTip="{Binding Name}">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount}" Style="{StaticResource MutedCode}" Margin="10,0,0,0"/>
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource CodeCell}"/>
+                            </DockPanel>
+                        </Expander.Header>
+                        <ItemsPresenter/>
+                    </Expander>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

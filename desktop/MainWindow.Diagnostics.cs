@@ -18,6 +18,7 @@ public partial class MainWindow
         public string Status { get; } = status;
         public string Severity { get; } = Capitalize(item.Severity);
         public string FileName { get; } = item.File is { Length: > 0 } file ? Path.GetFileName(file) : "—";
+        public string GroupFile => Item.File is { Length: > 0 } path ? path : "No source file";
         public string Location { get; } = FormatLocation(item.Line, item.Column);
         public string Occurrences { get; } = item.PreviousCount is { } previous
             ? $"{previous:N0} → {item.Count:N0}" : item.Count.ToString("N0");
@@ -386,11 +387,14 @@ public partial class MainWindow
 
     private void SetDisplayedRows(DiagnosticRow[] rows, int total)
     {
-        Results.ItemsSource = rows;
+        BindDiagnosticRows(rows);
         Results.Visibility = Visible(rows.Length > 0);
         DiagnosticEmpty.Visibility = Visible(rows.Length == 0);
         ResultCount.Text = rows.Length == total ? $"{total:N0} diagnostics" : $"{rows.Length:N0} of {total:N0}";
         ResultTitle.Text = page == Page.Compare ? CategoryLabel(category) : "Diagnostics";
+        WorkspaceStatus.Text = page is Page.Analyze or Page.Compare
+            ? (ActiveReport is null ? "No report open" : ResultCount.Text)
+            : page == Page.History ? "" : $"Local workspace  ·  History {(preferences.KeepHistory ? "on" : "off")}";
         if (rows.Length > 0) return;
 
         var hasReport = ActiveReport is not null;
@@ -404,7 +408,13 @@ public partial class MainWindow
     }
 
     private static string CategoryLabel(ComparisonCategory selected) =>
-        selected == ComparisonCategory.MoreFrequent ? "More frequent" : selected.ToString();
+        selected switch
+        {
+            ComparisonCategory.Fixed => "Resolved",
+            ComparisonCategory.Existing => "Persistent",
+            ComparisonCategory.MoreFrequent => "More frequent",
+            _ => selected.ToString()
+        };
 
     private void SelectCategory(ComparisonCategory selected, Button card)
     {
@@ -432,11 +442,11 @@ public partial class MainWindow
     {
         if (!initialized) return;
         var row = Results.SelectedItem as DiagnosticRow;
-        DetailPanel.Visibility = Visible(row is not null);
+        SetInspector(row is not null);
         UpdateReportActions();
         if (row is null)
         {
-            Original.Clear();
+            Original.Document.Blocks.Clear();
             return;
         }
         var item = row.Item;
@@ -445,7 +455,7 @@ public partial class MainWindow
         DetailMessage.Text = item.Message;
         DetailLocation.Text = string.Join("  ·  ", new[] { item.File, row.Location != "—" ? row.Location : null, $"{row.Occurrences} repeats" }
             .Where(value => !string.IsNullOrEmpty(value)));
-        Original.Text = item.Original;
+        ShowLogExcerpt(item.Original);
     }
 
     private void CloseDetails(object sender, RoutedEventArgs e)
