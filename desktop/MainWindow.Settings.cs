@@ -14,6 +14,7 @@ public partial class MainWindow
 
     private readonly string preferencesPath;
     private Preferences preferences = new();
+    private static readonly JsonSerializerOptions PreferencesReadOptions = new() { PropertyNameCaseInsensitive = true };
     private string? selectedProject;
     private string? selectedEditor;
 
@@ -35,7 +36,8 @@ public partial class MainWindow
         if (!File.Exists(preferencesPath)) return new();
         using var file = File.OpenRead(preferencesPath);
         if (file.Length > 64 * 1024) throw new IOException("Settings file exceeds the supported size.");
-        return JsonSerializer.Deserialize<Preferences>(file) ?? new();
+        var saved = JsonSerializer.Deserialize<Preferences>(file, PreferencesReadOptions) ?? new();
+        return Enum.IsDefined(saved.Theme) ? saved : saved with { Theme = Appearance.System };
     }
 
     private void ShowPreferences()
@@ -97,6 +99,8 @@ public partial class MainWindow
                 File.Delete(temporary);
             }
             preferences = updated;
+            UpdateDashboard();
+            WorkspaceStatus.Text = $"Local workspace  ·  History {(preferences.KeepHistory ? "on" : "off")}";
             UpdateReportActions();
             Status.Text = "Settings saved.";
         }

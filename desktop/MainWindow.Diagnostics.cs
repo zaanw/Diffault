@@ -466,7 +466,8 @@ public partial class MainWindow
 
     private void UpdateReportActions()
     {
-        var canOpenSource = preferences.Project is not null && Results.SelectedItem is DiagnosticRow { Item.File.Length: > 0 };
+        var canOpenSource = !string.IsNullOrWhiteSpace(preferences.Project)
+            && Results.SelectedItem is DiagnosticRow { Item.File.Length: > 0 };
         HeaderActions.Visibility = Visible(ActiveReport is not null);
         HeaderSource.Visibility = Visible(canOpenSource);
         OpenSourceButton.Visibility = Visible(canOpenSource);

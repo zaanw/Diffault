@@ -39,6 +39,15 @@ jobs:
         shell: pwsh
         run: |
           ./.github/scripts/Package-Windows.ps1 -PublishDirectory artifacts/win-x64 -ArchivePath artifacts/Diffault-win-x64.zip -Screenshots artifacts/workspace-screenshots
+      - name: Expose reduced Windows captures for visual review
+        if: always()
+        shell: pwsh
+        run: |
+          foreach ($frame in (Get-ChildItem artifacts/workspace-screenshots -Filter 'review-*.jpg' -ErrorAction SilentlyContinue)) {
+            $bytes = [System.IO.File]::ReadAllBytes($frame.FullName)
+            $data = [Convert]::ToBase64String($bytes)
+            Write-Host "::notice title=Diffault visual review::$($frame.BaseName)=$data"
+          }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

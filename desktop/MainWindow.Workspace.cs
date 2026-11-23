@@ -113,16 +113,20 @@ public partial class MainWindow
 
     private void BindDiagnosticRows(DiagnosticRow[] rows)
     {
+        var selected = Results.SelectedItem as DiagnosticRow;
         visibleRows = rows;
         if (GroupByFile.IsChecked != true || rows.Length == 0)
         {
             Results.ItemsSource = rows;
-            return;
+        }
+        else
+        {
+            var view = new ListCollectionView(rows);
+            view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(DiagnosticRow.GroupFile)));
+            Results.ItemsSource = view;
         }
 
-        var view = new ListCollectionView(rows);
-        view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(DiagnosticRow.GroupFile)));
-        Results.ItemsSource = view;
+        if (selected is not null && Array.IndexOf(rows, selected) >= 0) Results.SelectedItem = selected;
     }
 
     private void DiagnosticPanesResized(object sender, SizeChangedEventArgs e)
@@ -150,7 +154,7 @@ public partial class MainWindow
         }
         else
         {
-            DetailResizeCompleted(this, new DragCompletedEventArgs(0, 0, false));
+            if (DetailColumn.ActualWidth >= MinimumInspectorWidth) inspectorWidth = DetailColumn.ActualWidth;
             DetailColumn.MinWidth = 0;
             DetailColumn.Width = GripColumn.Width = new GridLength(0);
         }
