@@ -39,34 +39,6 @@ jobs:
         shell: pwsh
         run: |
           ./.github/scripts/Package-Windows.ps1 -PublishDirectory artifacts/win-x64 -ArchivePath artifacts/Diffault-win-x64.zip -Screenshots artifacts/workspace-screenshots
-      - name: Review frame wide-Dark-Dashboard
-        if: always()
-        shell: pwsh
-        run: ./.github/scripts/Review-Frame.ps1 -Pattern 'review-wide-*-Dark-Dashboard.jpg'
-      - name: Review frame wide-Dark-Analyze
-        if: always()
-        shell: pwsh
-        run: ./.github/scripts/Review-Frame.ps1 -Pattern 'review-wide-*-Dark-Analyze.jpg'
-      - name: Review frame wide-Dark-Compare
-        if: always()
-        shell: pwsh
-        run: ./.github/scripts/Review-Frame.ps1 -Pattern 'review-wide-*-Dark-Compare.jpg'
-      - name: Review frame wide-Dark-History
-        if: always()
-        shell: pwsh
-        run: ./.github/scripts/Review-Frame.ps1 -Pattern 'review-wide-*-Dark-History.jpg'
-      - name: Review frame wide-Dark-Settings
-        if: always()
-        shell: pwsh
-        run: ./.github/scripts/Review-Frame.ps1 -Pattern 'review-wide-*-Dark-Settings.jpg'
-      - name: Review frame compact-Light-Analyze
-        if: always()
-        shell: pwsh
-        run: ./.github/scripts/Review-Frame.ps1 -Pattern 'review-compact-*-Light-Analyze.jpg'
-      - name: Review frame compact-Light-Settings
-        if: always()
-        shell: pwsh
-        run: ./.github/scripts/Review-Frame.ps1 -Pattern 'review-compact-*-Light-Settings.jpg'
       - uses: actions/upload-artifact@v4
         if: always()
         with:

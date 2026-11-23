@@ -328,14 +328,5 @@ public partial class MainWindow
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = File.Create(Path.Combine(outputDirectory, name + ".png"));
         encoder.Save(stream);
-        if ((name.StartsWith("review-wide-") && name.Contains("-Dark-")) ||
-            (name.StartsWith("review-compact-") && (name.EndsWith("-Light-Analyze") || name.EndsWith("-Light-Settings"))))
-        {
-            var reduced = new TransformedBitmap(bitmap, new ScaleTransform(0.42, 0.42));
-            var preview = new JpegBitmapEncoder { QualityLevel = 64 };
-            preview.Frames.Add(BitmapFrame.Create(reduced));
-            using var previewStream = File.Create(Path.Combine(outputDirectory, name + ".jpg"));
-            preview.Save(previewStream);
-        }
     }
 }
