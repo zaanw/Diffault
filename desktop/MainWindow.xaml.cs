@@ -69,15 +69,6 @@ public partial class MainWindow : Window
         page = destination;
         if (leavingSettings) ApplyAppearance(preferences.Theme);
         TitleText.Text = destination.ToString();
-        PageSubtitle.Text = destination switch
-        {
-            Page.Dashboard => "Your local build diagnostics",
-            Page.Analyze => "Inspect diagnostics from a single log",
-            Page.Compare => "Track what changed between builds",
-            Page.History => "Find and reopen saved reports",
-            Page.Settings => "Configure this workspace",
-            _ => ""
-        };
         DashboardNav.Tag = Active(destination == Page.Dashboard);
         AnalyzeNav.Tag = Active(destination == Page.Analyze);
         CompareNav.Tag = Active(destination == Page.Compare);
@@ -95,6 +86,21 @@ public partial class MainWindow : Window
         if (destination == Page.Dashboard) UpdateDashboard();
         RefreshDiagnostics();
         Fade(Workspace);
+    }
+
+    private void UpdatePageContext()
+    {
+        var report = ActiveReport;
+        PageSubtitle.Text = page switch
+        {
+            Page.Dashboard => "Your local build diagnostics",
+            Page.Analyze => report?.Label ?? "Inspect diagnostics from a build log",
+            Page.Compare => report?.Label ?? "Track what changed between builds",
+            Page.History => "Saved reports",
+            Page.Settings => "Local workspace preferences",
+            _ => ""
+        };
+        PageSubtitle.ToolTip = report?.Label;
     }
 
     private async void NavigateClicked(object sender, RoutedEventArgs e)
@@ -187,7 +193,7 @@ public partial class MainWindow : Window
                 var counts = comparison is null ? null : comparison.Id == cachedComparison?.Id && cachedCounts is not null
                     ? cachedCounts : history.ReadComparisonCounts(comparison.Id);
                 ReportOverview? summary = null;
-                if (needOverview && recent.FirstOrDefault() is { } latest)
+                if (needOverview && history.List(limit: 1, kind: AnalysisKind.Analysis).FirstOrDefault() is { } latest)
                 {
                     try { summary = ReportOverview.Summarize(latest.Label, history.Load(latest.Id)); }
                     catch (Exception error) { diagnostics.Record("history.summary", error); }
@@ -201,7 +207,6 @@ public partial class MainWindow : Window
             RecentList.ItemsSource = overview.recent.Select(entry => new SavedReport(entry)).ToArray();
             var hasEntries = overview.recent.Length > 0;
             DashboardEmptyTitle.Text = "No saved reports yet";
-            DashboardEmptyDetail.Text = "Analyze a build log to start your history.";
             DashboardEmpty.Visibility = Visible(!hasEntries);
             RecentList.Visibility = Visible(hasEntries);
             RecentActions.Visibility = Visible(hasEntries);
@@ -223,6 +228,9 @@ public partial class MainWindow : Window
         DashboardWarnings.Text = latestOverview?.Warnings.ToString("N0") ?? "—";
         DashboardLatest.Text = latestOverview?.Label ?? "No report yet";
         DashboardLatest.ToolTip = latestOverview?.Label;
+        if (DashboardEmptyTitle.Text == "No saved reports yet")
+            DashboardEmptyDetail.Text = preferences.KeepHistory
+                ? "Analyze a build log to start your history." : "Saving history is disabled in Settings.";
         DashboardProject.Text = preferences.Project ?? "Not configured";
         DashboardProject.ToolTip = preferences.Project;
         LatestComparisonButton.Visibility = Visible(latestComparison is not null || latestSavedComparison is not null);

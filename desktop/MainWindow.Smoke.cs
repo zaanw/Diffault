@@ -36,6 +36,7 @@ public partial class MainWindow
 
         await AnalyzeFileAsync(before);
         Require(page == Page.Analyze && analysis?.Total == 3 && Results.Items.Count == 3, $"Log import failed. {Status.Text}");
+        Require(PageSubtitle.Text == Path.GetFileName(before), "Analysis did not show the current log name.");
         Require(AnalyzeErrors.Text == "3 errors" && DetectedLanguages.Text.Contains("Go"), "Analysis summary is incorrect.");
         Search.Text = "CS0103";
         filterTimer.Stop();
@@ -170,6 +171,7 @@ public partial class MainWindow
         latestComparison = null;
         await RefreshDashboardAsync();
         Require(latestComparison is null && latestSavedComparison is not null, "Recent comparison was not loaded lazily.");
+        Require(DashboardLatest.Text == Path.GetFileName(before), "The dashboard replaced the latest analysis with a comparison.");
         await RestoreHistoryAsync(latestSavedComparison!);
         Require(page == Page.Compare && comparison?.Data.Existing.Length == 2, "Saved comparison did not reopen.");
 

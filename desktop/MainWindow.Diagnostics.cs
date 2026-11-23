@@ -234,7 +234,6 @@ public partial class MainWindow
         {
             var snapshot = await Task.Run(async () => new WorkspaceReport(
                 await RunEngine(command, files, text).ConfigureAwait(false), kind, label));
-            latestOverview = snapshot.Overview;
             if (kind == AnalysisKind.Comparison)
             {
                 comparison = latestComparison = snapshot;
@@ -243,6 +242,7 @@ public partial class MainWindow
             else
             {
                 analysis = snapshot;
+                latestOverview = snapshot.Overview;
             }
             UpdateDashboard();
             RefreshDiagnostics();
@@ -281,6 +281,7 @@ public partial class MainWindow
     private void RefreshDiagnostics()
     {
         var snapshot = ActiveReport;
+        UpdatePageContext();
         if (!ReferenceEquals(snapshot, filteredReport))
         {
             filteredReport = snapshot;
