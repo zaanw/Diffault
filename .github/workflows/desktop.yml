@@ -1,5 +1,6 @@
 name: Diffault Desktop
 on:
+  workflow_dispatch:
   push:
   pull_request:
 
@@ -18,19 +19,22 @@ jobs:
         shell: pwsh
         run: |
           rustup toolchain install 1.100.0 --profile minimal
+          rustup component add --toolchain 1.100.0 rustfmt
+          cargo +1.100.0 fmt --manifest-path engine/Cargo.toml --all -- --check
           cargo +1.100.0 test --locked --manifest-path engine/Cargo.toml
           $env:RUSTFLAGS = '-C target-feature=+crt-static'
           cargo +1.100.0 build --release --locked --manifest-path engine/Cargo.toml --target x86_64-pc-windows-msvc
       - name: Verify comparison, exports and SQLite
         shell: pwsh
         run: |
-          dotnet restore checks/ErrorHunt.Checks.csproj --locked-mode
+          dotnet restore checks/ErrorHunt.Checks.csproj --locked-mode -p:NuGetAuditMode=all -warnaserror:NU1903,NU1904
           dotnet run --no-restore --project checks/ErrorHunt.Checks.csproj -- engine/target/x86_64-pc-windows-msvc/release/errorhunt-engine.exe
       - name: Create the self-contained Windows x64 build
         shell: pwsh
         run: |
           $engine = (Resolve-Path engine/target/x86_64-pc-windows-msvc/release/errorhunt-engine.exe).Path
-          dotnet publish desktop/ErrorHunt.Desktop.csproj -c Release -r win-x64 --self-contained -p:RestoreLockedMode=true "-p:EngineExecutable=$engine" -o artifacts/win-x64
+          dotnet publish desktop/ErrorHunt.Desktop.csproj -c Release -r win-x64 --self-contained -p:RestoreLockedMode=true -p:NuGetAuditMode=all -warnaserror:NU1903,NU1904 "-p:EngineExecutable=$engine" -o artifacts/win-x64
+          dotnet publish desktop/ErrorHunt.Desktop.csproj -c Release -r win-x64 --self-contained -p:RestoreLockedMode=true -p:DiffaultSmoke=true "-p:EngineExecutable=$engine" -o artifacts/win-x64-smoke
           if (!(Test-Path artifacts/win-x64/Diffault.exe) -or !(Test-Path artifacts/win-x64/errorhunt-engine.exe)) {
             throw "Missing executable in the Windows build."
           }
@@ -38,18 +42,31 @@ jobs:
       - name: Package, extract, and launch the Windows ZIP
         shell: pwsh
         run: |
-          ./.github/scripts/Package-Windows.ps1 -PublishDirectory artifacts/win-x64 -ArchivePath artifacts/Diffault-win-x64.zip -Screenshots artifacts/workspace-screenshots
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw 'The tag does not match VERSION.'
+          }
+          ./.github/scripts/Package-Windows.ps1 -PublishDirectory artifacts/win-x64 -SmokeDirectory artifacts/win-x64-smoke -EditorProbeDirectory checks/bin/Debug/net10.0 -Version $version -ArchivePath "artifacts/release/Diffault-v$version-win-x64.zip" -Screenshots artifacts/workspace-screenshots
+      - name: Dark comparison preview
+        if: github.ref_type != 'tag'
+        shell: pwsh
+        run: ./.github/scripts/Review-Preview.ps1 -Pattern 'review-wide-*-Dark-Compare.jpg'
+      - name: Light analysis preview
+        if: github.ref_type != 'tag'
+        shell: pwsh
+        run: ./.github/scripts/Review-Preview.ps1 -Pattern 'review-wide-*-Light-Analyze.jpg'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: Diffault-workspace-screenshots
           path: artifacts/workspace-screenshots/
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
-          path: artifacts/Diffault-win-x64.zip
-          archive: false
+          name: Diffault-win-x64
+          path: artifacts/release/
           if-no-files-found: error
+          compression-level: 0
 
   tools:
     runs-on: ubuntu-latest
@@ -75,6 +92,7 @@ jobs:
         working-directory: viewer
         run: |
           npm ci
+          npm audit --audit-level=high
           npm test
       - uses: actions/upload-artifact@v4
         with:
@@ -102,3 +120,73 @@ jobs:
           for adapter in java php lua swift; do
             python3 adapters/check.py engine/target/debug/errorhunt-engine "$adapter"
           done
+
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e . pytest
+      - run: python -m pytest -q
+
+  source-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Scan source history for credentials
+        run: |
+          go install github.com/zricethezav/gitleaks/v8@v8.24.3
+          "$(go env GOPATH)/bin/gitleaks" git --redact --log-opts=HEAD .
+      - name: Audit locked Rust dependencies
+        run: |
+          cargo install cargo-audit --locked --version 0.22.1
+          cd engine
+          cargo audit
+
+  publish-beta:
+    if: github.event_name == 'push' && github.ref_type == 'tag' && startsWith(github.ref_name, 'v0.1.0-beta.')
+    needs: [windows, tools, adapters, python, source-audit]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    concurrency:
+      group: diffault-release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: Diffault-win-x64
+          path: release
+      - name: Verify and publish the Windows prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag="$GITHUB_REF_NAME"
+          [[ "$tag" =~ ^v0[.]1[.]0-beta[.][1-9][0-9]*$ ]]
+          [[ "$tag" == "v$(tr -d '\r\n' < VERSION)" ]]
+          test -s "release/Diffault-$tag-win-x64.zip"
+          test -s release/SHA256SUMS.txt
+          (cd release && sha256sum --check --strict SHA256SUMS.txt)
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "A release already exists for $tag." >&2
+            exit 1
+          fi
+          gh release create "$tag" "release/Diffault-$tag-win-x64.zip" release/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false \
+            --title "Diffault v0.1.0 — Public Beta ${tag##*.}" --notes-file .github/release-notes.md
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets \
+            --jq ".isDraft == false and .isPrerelease == true and ([.assets[].name] | sort == [\"Diffault-$tag-win-x64.zip\", \"SHA256SUMS.txt\"])" | grep -Fx true

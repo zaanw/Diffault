@@ -43,7 +43,8 @@ public partial class MainWindow
             New = data.New.Select(item => new DiagnosticRow(item, "New")).ToArray();
             Existing = data.Existing.Select(item => new DiagnosticRow(item, "Persistent")).ToArray();
             MoreFrequent = Existing.Where(row => row.Item.Count > row.Item.PreviousCount).ToArray();
-            Rows = kind == AnalysisKind.Comparison ? [.. Fixed, .. New, .. Existing] : [.. New, .. Existing, .. Fixed];
+            Rows = Fixed.Length == 0 && Existing.Length == 0 ? New
+                : kind == AnalysisKind.Comparison ? [.. Fixed, .. New, .. Existing] : [.. New, .. Existing, .. Fixed];
             Overview = ReportOverview.Summarize(label, data);
             Severities = Options(Rows.Select(row => row.Item.Severity), "All severities", Capitalize);
             Languages = Options(Rows.Select(row => row.Item.Language), "All languages", Capitalize);
@@ -144,6 +145,7 @@ public partial class MainWindow
 
     private void SetCompareFile(string file, bool before)
     {
+        ClearTimeline();
         if (before) beforePath = file;
         else afterPath = file;
         ShowFiles();
@@ -211,6 +213,7 @@ public partial class MainWindow
         if (DroppedFiles(e) is [var before, var after])
         {
             e.Handled = true;
+            ClearTimeline();
             Navigate(Page.Compare);
             beforePath = before;
             afterPath = after;
@@ -236,6 +239,7 @@ public partial class MainWindow
                 await RunEngine(command, files, text).ConfigureAwait(false), kind, label));
             if (kind == AnalysisKind.Comparison)
             {
+                ClearTimeline();
                 comparison = latestComparison = snapshot;
                 category = ComparisonCategory.New;
             }
@@ -264,6 +268,8 @@ public partial class MainWindow
             {
                 Status.Text = $"Analysis complete · {label}";
             }
+            if (kind == AnalysisKind.Analysis && snapshot.Total == 0)
+                Status.Text = "No diagnostics matched a supported log format.";
         }
         catch (Exception error)
         {
@@ -478,7 +484,9 @@ public partial class MainWindow
         UpdateCategoryHighlight();
     }
 
-    private static async Task<Report> RunEngine(string command, string[] files, string? text)
+    private sealed record DiagnosticPair(Diagnostic[] Before, Diagnostic[] After);
+
+    private static async Task<Report> RunEngine(string command, string[] files, string? text, DiagnosticPair? pair = null)
     {
         foreach (var file in files)
         {
@@ -493,21 +501,26 @@ public partial class MainWindow
             UseShellExecute = false,
             CreateNoWindow = true,
             WorkingDirectory = AppContext.BaseDirectory,
-            RedirectStandardInput = text is not null,
+            RedirectStandardInput = text is not null || pair is not null,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8
         };
-        if (text is not null) start.StandardInputEncoding = new UTF8Encoding(false);
+        if (start.RedirectStandardInput) start.StandardInputEncoding = new UTF8Encoding(false);
         start.ArgumentList.Add(command);
         foreach (var file in files) start.ArgumentList.Add(file);
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Unable to start the engine.");
-        var output = ReadEngineOutputAsync(process.StandardOutput.BaseStream, command is "compare" or "compare-reports");
+        var output = ReadEngineOutputAsync(process.StandardOutput.BaseStream, command is "compare" or "compare-reports" or "compare-stdin");
         var errors = process.StandardError.BaseStream.CopyToAsync(Stream.Null);
-        if (text is not null)
+        if (start.RedirectStandardInput)
         {
-            try { await JsonSerializer.SerializeAsync(process.StandardInput.BaseStream, new { before = text }); }
+            try
+            {
+                var input = process.StandardInput.BaseStream;
+                if (pair is not null) await JsonSerializer.SerializeAsync(input, pair, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                else await JsonSerializer.SerializeAsync(input, new { before = text });
+            }
             catch (IOException) { /* The engine may close its input when the request exceeds its limit. */ }
             finally { process.StandardInput.Close(); }
         }

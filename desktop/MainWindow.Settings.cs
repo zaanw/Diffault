@@ -10,7 +10,12 @@ namespace ErrorHunt;
 public partial class MainWindow
 {
     private sealed record Preferences(bool KeepHistory = true, bool Sarif = false,
-        string? Project = null, string? Editor = null, Appearance Theme = Appearance.System);
+        string? Project = null, string? Editor = null, Appearance Theme = Appearance.System, bool Markdown = false);
+
+    private enum ReportFormat { Json, Sarif, Markdown }
+
+    private ReportFormat PreferredFormat => preferences.Markdown ? ReportFormat.Markdown
+        : preferences.Sarif ? ReportFormat.Sarif : ReportFormat.Json;
 
     private readonly string preferencesPath;
     private Preferences preferences = new();
@@ -46,7 +51,7 @@ public partial class MainWindow
     {
         ThemeSelection.SelectedIndex = Enum.IsDefined(preferences.Theme) ? (int)preferences.Theme : 0;
         SaveHistory.IsChecked = preferences.KeepHistory;
-        ExportFormat.SelectedIndex = preferences.Sarif ? 1 : 0;
+        ExportFormat.SelectedIndex = (int)PreferredFormat;
         selectedProject = preferences.Project;
         selectedEditor = preferences.Editor;
         UpdatePaths();
@@ -87,7 +92,7 @@ public partial class MainWindow
 
     private void SaveSettings(object sender, RoutedEventArgs e)
     {
-        var updated = new Preferences(SaveHistory.IsChecked == true, ExportFormat.SelectedIndex == 1, selectedProject, selectedEditor, SelectedAppearance);
+        var updated = new Preferences(SaveHistory.IsChecked == true, ExportFormat.SelectedIndex == 1, selectedProject, selectedEditor, SelectedAppearance, ExportFormat.SelectedIndex == (int)ReportFormat.Markdown);
         try
         {
             var temporary = $"{preferencesPath}.{Guid.NewGuid():N}.tmp";
@@ -150,7 +155,7 @@ public partial class MainWindow
 
     private void OpenSource(object sender, RoutedEventArgs e)
     {
-        if (Results.SelectedItem is not DiagnosticRow { Item.File: { } file }) return;
+        if (Results.SelectedItem is not DiagnosticRow { Item: { File: { } file } diagnostic }) return;
         if (preferences.Project is not { } project)
         {
             Status.Text = "Choose and save a local project folder in Settings.";
@@ -165,7 +170,8 @@ public partial class MainWindow
                 !File.Exists(editor))
                 throw new IOException("Choose an installed local editor executable in Settings.");
             var start = new ProcessStartInfo(editor) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(editor) };
-            start.ArgumentList.Add(source);
+            foreach (var argument in EditorArguments.ForSource(editor, source, diagnostic.Line, diagnostic.Column))
+                start.ArgumentList.Add(argument);
             Process.Start(start)?.Dispose();
         }
         catch (Exception error) { ShowFailure("source.open", "Could not open a local source file. Check the project folder and editor in Settings.", error); }
@@ -173,28 +179,57 @@ public partial class MainWindow
 
     private void OpenExportMenu(object sender, RoutedEventArgs e)
     {
-        PreferredExport.Header = preferences.Sarif ? "Export preferred format (SARIF)" : "Export preferred format (JSON)";
+        PreferredExport.Header = $"Export preferred format ({FormatLabel(PreferredFormat)})";
         HeaderExport.ContextMenu.PlacementTarget = HeaderExport;
         HeaderExport.ContextMenu.Placement = PlacementMode.Bottom;
         HeaderExport.ContextMenu.IsOpen = true;
     }
 
-    private static Task WriteReportAsync(Report report, string path, bool sarif) =>
-        Task.Run(() => File.WriteAllText(path, sarif ? report.ToSarif() : report.ToJson()));
+    private static string FormatLabel(ReportFormat format) => format switch
+    {
+        ReportFormat.Sarif => "SARIF",
+        ReportFormat.Markdown => "Markdown",
+        _ => "JSON"
+    };
 
-    private async Task Export(bool sarif)
+    private static Task WriteReportAsync(WorkspaceReport snapshot, string path, ReportFormat format) =>
+        Task.Run(() =>
+        {
+            if (format == ReportFormat.Json)
+            {
+                using var stream = File.Create(path);
+                JsonSerializer.Serialize(stream, snapshot.Data, Report.JsonOptions);
+            }
+            else if (format == ReportFormat.Markdown)
+            {
+                using var writer = File.CreateText(path);
+                ReportMarkdown.Write(writer, snapshot.Data, snapshot.Label, snapshot.Kind == AnalysisKind.Comparison);
+            }
+            else
+            {
+                File.WriteAllText(path, snapshot.Data.ToSarif());
+            }
+        });
+
+    private async Task Export(ReportFormat format)
     {
         if (busy || ActiveReport is not { } snapshot) return;
+        var extension = format switch
+        {
+            ReportFormat.Sarif => "sarif",
+            ReportFormat.Markdown => "md",
+            _ => "json"
+        };
         var dialog = new SaveFileDialog
         {
-            FileName = sarif ? "diffault.sarif" : "diffault.json",
-            Filter = sarif ? "SARIF report|*.sarif" : "JSON report|*.json",
+            FileName = $"diffault.{extension}",
+            Filter = $"{FormatLabel(format)} report|*.{extension}",
             OverwritePrompt = true
         };
         if (!ShowFileDialog(dialog, "report.destination", "The report location could not be selected.")) return;
         try
         {
-            await WriteReportAsync(snapshot.Data, dialog.FileName, sarif);
+            await WriteReportAsync(snapshot, dialog.FileName, format);
             Status.Text = $"Exported {Path.GetFileName(dialog.FileName)}";
         }
         catch (Exception error) { ShowFailure("report.export", "The report could not be written to the selected location.", error); }
@@ -210,7 +245,8 @@ public partial class MainWindow
         }
     }
 
-    private async void ExportPreferred(object sender, RoutedEventArgs e) => await Export(preferences.Sarif);
-    private async void ExportJson(object sender, RoutedEventArgs e) => await Export(false);
-    private async void ExportSarif(object sender, RoutedEventArgs e) => await Export(true);
+    private async void ExportPreferred(object sender, RoutedEventArgs e) => await Export(PreferredFormat);
+    private async void ExportJson(object sender, RoutedEventArgs e) => await Export(ReportFormat.Json);
+    private async void ExportSarif(object sender, RoutedEventArgs e) => await Export(ReportFormat.Sarif);
+    private async void ExportMarkdown(object sender, RoutedEventArgs e) => await Export(ReportFormat.Markdown);
 }

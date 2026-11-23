@@ -1,4 +1,5 @@
-use errorhunt_engine::{Request, compare, decode, parse};
+use errorhunt_engine::{Diagnostic, Request, compare, decode_owned, parse};
+use serde::{Deserialize, de::DeserializeOwned};
 use std::{
     env,
     error::Error,
@@ -25,7 +26,32 @@ fn input(path: &str) -> io::Result<String> {
             "Log exceeds 64 MiB",
         ));
     }
-    Ok(decode(&bytes))
+    if !bytes.starts_with(&[0xff, 0xfe])
+        && !bytes.starts_with(&[0xfe, 0xff])
+        && bytes[..bytes.len().min(8192)].contains(&0)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Unsupported binary log",
+        ));
+    }
+    Ok(decode_owned(bytes))
+}
+
+#[derive(Deserialize)]
+struct DiagnosticPair {
+    before: Vec<Diagnostic>,
+    after: Vec<Diagnostic>,
+}
+
+fn request<T: DeserializeOwned>(limit: usize) -> Result<T, Box<dyn Error>> {
+    let limited = io::stdin().lock().take((limit + 1) as u64);
+    let mut input = io::BufReader::new(limited);
+    let request = serde_json::from_reader::<_, T>(&mut input)?;
+    if input.into_inner().limit() == 0 {
+        return Err("JSON request exceeds the supported limit".into());
+    }
+    Ok(request)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -47,21 +73,18 @@ fn main() -> Result<(), Box<dyn Error>> {
             serde_json::to_writer(output, &compare(before, after))?;
         }
         [command] if command == "stdin" => {
-            let mut bytes = Vec::new();
-            io::stdin()
-                .take((MAX_LOG + 1) as u64)
-                .read_to_end(&mut bytes)?;
-            if bytes.len() > MAX_LOG {
-                return Err("JSON request exceeds 64 MiB".into());
-            }
-            let request: Request = serde_json::from_slice(&bytes)?;
+            let request: Request = request(MAX_LOG)?;
             let before = parse(&request.before);
             match request.after {
                 Some(after) => serde_json::to_writer(output, &compare(before, parse(&after)))?,
                 None => serde_json::to_writer(output, &before)?,
             }
         }
-        _ => return Err("Usage: errorhunt-engine scan FILE | compare BEFORE AFTER | compare-reports BEFORE_JSON AFTER_JSON | stdin".into()),
+        [command] if command == "compare-stdin" => {
+            let request: DiagnosticPair = request(MAX_LOG * 2)?;
+            serde_json::to_writer(output, &compare(request.before, request.after))?;
+        }
+        _ => return Err("Usage: errorhunt-engine scan FILE | compare BEFORE AFTER | compare-reports BEFORE_JSON AFTER_JSON | stdin | compare-stdin".into()),
     }
     Ok(())
 }

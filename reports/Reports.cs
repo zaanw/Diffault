@@ -198,8 +198,17 @@ public sealed class History(string path)
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT report_json FROM analyses WHERE id = $id";
         command.Parameters.AddWithValue("$id", id);
-        return command.ExecuteScalar() is string json
-            ? JsonSerializer.Deserialize<Report>(json, Report.JsonOptions)!
-            : throw new InvalidOperationException("The report is no longer in history.");
+        if (command.ExecuteScalar() is not string json)
+            throw new InvalidOperationException("The report is no longer in history.");
+
+        var report = JsonSerializer.Deserialize<Report>(json, Report.JsonOptions);
+        if (report is not { Fixed: not null, New: not null, Existing: not null } ||
+            !Valid(report.Fixed) || !Valid(report.New) || !Valid(report.Existing))
+            throw new JsonException("The saved report is incomplete.");
+
+        return report;
+
+        static bool Valid(Diagnostic[] group) => Array.TrueForAll(group,
+            item => item is { Language: not null, Severity: not null, Message: not null, Original: not null });
     }
 }

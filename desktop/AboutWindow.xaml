@@ -1,0 +1,31 @@
+<Window x:Class="ErrorHunt.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About Diffault" Icon="Assets/Diffault.ico" Width="485" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        Background="{DynamicResource CanvasBrush}" Foreground="{DynamicResource TextBrush}"
+        FontFamily="{StaticResource WorkspaceFont}" FontSize="13">
+    <StackPanel Margin="22">
+        <DockPanel Margin="0,0,0,17">
+            <Image Source="Assets/Diffault.ico" Width="44" Height="44" DockPanel.Dock="Left" Margin="0,0,12,0"/>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Diffault" FontSize="21" FontWeight="SemiBold"/>
+                <TextBlock x:Name="InstalledVersion" Style="{StaticResource MutedCode}"/>
+            </StackPanel>
+        </DockPanel>
+        <Border Style="{StaticResource Panel}" Padding="12">
+            <StackPanel>
+                <TextBlock Text="What’s new" Style="{StaticResource SectionTitle}" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap" Text="Compare consecutive builds from History, export Markdown reports and jump to the source location in supported editors."/>
+            </StackPanel>
+        </Border>
+        <TextBlock x:Name="UpdateStatus" Text="Update checks contact GitHub when requested." Style="{StaticResource Muted}"
+                   TextWrapping="Wrap" Margin="0,13,0,8" AutomationProperties.LiveSetting="Polite"/>
+        <WrapPanel>
+            <Button x:Name="CheckButton" Content="Check for updates" Click="CheckClicked" Style="{StaticResource PrimaryButton}" Margin="0,0,7,0"/>
+            <Button x:Name="OpenReleaseButton" Content="View update" Click="OpenUpdate" Visibility="Collapsed" Margin="0,0,7,0"/>
+            <Button Content="Report an issue" Click="ReportIssue" Margin="0,0,7,0"/>
+            <Button Content="Close" IsCancel="True" Style="{StaticResource QuietButton}"/>
+        </WrapPanel>
+    </StackPanel>
+</Window>

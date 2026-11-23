@@ -33,6 +33,7 @@ public partial class MainWindow : Window
     {
         diagnostics = logger ?? new LocalDiagnostics(Path.Combine(dataDirectory, "diagnostics.log"));
         InitializeComponent();
+        VersionButton.Content = $"v{AboutWindow.Version}";
         history = new History(Path.Combine(dataDirectory, "history.db"));
         preferencesPath = Path.Combine(dataDirectory, "settings.json");
         historyTimer.Tick += async (_, _) =>
@@ -114,6 +115,10 @@ public partial class MainWindow : Window
         if (destination == Page.History) await RefreshHistoryAsync();
     }
 
+    private void GoToSettings(object sender, RoutedEventArgs e) => Navigate(Page.Settings);
+
+    private void OpenAbout(object sender, RoutedEventArgs e) => new AboutWindow(diagnostics) { Owner = this }.ShowDialog();
+
     private void GoToCompare(object sender, RoutedEventArgs e) => Navigate(Page.Compare);
 
     private async void GoToHistory(object sender, RoutedEventArgs e)
@@ -154,6 +159,7 @@ public partial class MainWindow : Window
         BusyStatus.Visibility = Visible(value);
         AnalyzeActions.IsEnabled = !value;
         CompareActions.IsEnabled = !value;
+        UpdateHistoryActions();
         UpdateReportActions();
     }
 
@@ -233,6 +239,7 @@ public partial class MainWindow : Window
                 ? "Analyze a build log to start your history." : "Saving history is disabled in Settings.";
         DashboardProject.Text = preferences.Project ?? "Not configured";
         DashboardProject.ToolTip = preferences.Project;
+        DashboardMetrics.Visibility = Visible(latestOverview is not null || latestComparison is not null || latestSavedComparison is not null);
         LatestComparisonButton.Visibility = Visible(latestComparison is not null || latestSavedComparison is not null);
         var counts = latestComparison is { } live ? new ComparisonCounts(live.Fixed.Length, live.New.Length, live.Existing.Length)
             : latestSavedCounts;
@@ -298,9 +305,14 @@ public partial class MainWindow : Window
 
     private void HistorySelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!initialized) return;
-        OpenHistoryButton.IsEnabled = HistoryList.SelectedItem is SavedReport;
-        OpenRecentButton.IsEnabled = RecentList.SelectedItem is SavedReport;
+        if (initialized) UpdateHistoryActions();
+    }
+
+    private void UpdateHistoryActions()
+    {
+        OpenHistoryButton.IsEnabled = !busy && HistoryList.SelectedItems.Count == 1;
+        CompareHistoryButton.IsEnabled = CanCompareSelectedAnalyses;
+        OpenRecentButton.IsEnabled = !busy && RecentList.SelectedItem is SavedReport;
     }
 
     private WorkspaceReport ReadHistory(HistoryEntry entry) =>
@@ -326,6 +338,7 @@ public partial class MainWindow : Window
 
     private void OpenSnapshot(WorkspaceReport snapshot)
     {
+        ClearTimeline();
         if (snapshot.Kind == AnalysisKind.Comparison)
         {
             if (!ReferenceEquals(comparison, snapshot))
@@ -354,13 +367,14 @@ public partial class MainWindow : Window
     private async void OpenHistory(object sender, MouseButtonEventArgs e)
     {
         if (e.OriginalSource is DependencyObject target && sender is Selector list &&
-            ItemsControl.ContainerFromElement(list, target) is ListBoxItem or DataGridRow)
+            (list != HistoryList || HistoryList.SelectedItems.Count == 1) && ItemsControl.ContainerFromElement(list, target) is ListBoxItem or DataGridRow)
             await RestoreHistoryAsync(list);
     }
 
     private async void OpenHistoryWithKeyboard(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || sender is not Selector list) return;
+        if (e.Key != Key.Enter || sender is not Selector list ||
+            (list == HistoryList && HistoryList.SelectedItems.Count != 1)) return;
         e.Handled = true;
         await RestoreHistoryAsync(list);
     }

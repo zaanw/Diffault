@@ -1,7 +1,7 @@
 <Window x:Class="ErrorHunt.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Diffault" Width="1220" Height="710" MinWidth="850" MinHeight="525"
+        Title="Diffault" Icon="Assets/Diffault.ico" Width="1220" Height="710" MinWidth="850" MinHeight="525"
         WindowStartupLocation="CenterScreen" Background="{DynamicResource CanvasBrush}"
         Foreground="{DynamicResource TextBrush}" FontFamily="{StaticResource WorkspaceFont}" FontSize="12.5"
         UseLayoutRounding="True" SnapsToDevicePixels="True" AllowDrop="True"
@@ -15,10 +15,8 @@
         <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="0,0,1,0" Padding="8,11,8,8">
             <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="3,0,0,15">
-                    <Border Width="28" Height="28" CornerRadius="5" Background="{DynamicResource PrimaryBrush}">
-                        <Path Style="{StaticResource Icon}" Data="{StaticResource LogoIcon}" Stroke="{DynamicResource PrimaryTextBrush}" Width="16" Height="16"/>
-                    </Border>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="3,0,0,19">
+                    <Image Width="28" Height="28" Source="Assets/Diffault.ico" RenderOptions.BitmapScalingMode="HighQuality"/>
                     <TextBlock x:Name="BrandName" Text="Diffault" FontSize="16" FontWeight="SemiBold" Margin="9,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Top">
@@ -58,6 +56,8 @@
                         HorizontalAlignment="Left" Padding="7,4">
                     <Path Style="{StaticResource Icon}" Data="{StaticResource SidebarIcon}"/>
                 </Button>
+                <Button x:Name="VersionButton" DockPanel.Dock="Bottom" Click="OpenAbout" Style="{StaticResource QuietButton}"
+                        HorizontalAlignment="Left" Margin="0,0,0,6" ToolTip="What’s new, updates and feedback"/>
             </DockPanel>
         </Border>
 
@@ -81,6 +81,7 @@
                                     <Separator/>
                                     <MenuItem Header="Export JSON" Click="ExportJson"/>
                                     <MenuItem Header="Export SARIF" Click="ExportSarif"/>
+                                    <MenuItem Header="Export Markdown" Click="ExportMarkdown"/>
                                 </ContextMenu>
                             </Button.ContextMenu>
                         </Button>
@@ -118,7 +119,7 @@
                             </DockPanel>
                         </Border>
 
-                        <Grid Margin="0,9,0,9">
+                        <Grid x:Name="DashboardMetrics" Margin="0,9,0,0">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource Panel}" Margin="0,0,5,0" Padding="12,10">
                                 <StackPanel>
@@ -168,7 +169,7 @@
                             </Border>
                         </Grid>
 
-                        <Border Style="{StaticResource Panel}" Padding="11,8">
+                        <Border Style="{StaticResource Panel}" Padding="11,8" Margin="0,9,0,0">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,5">
                                     <Button Content="All reports" DockPanel.Dock="Right" Click="GoToHistory"
@@ -178,6 +179,8 @@
                                 <StackPanel x:Name="DashboardEmpty" Margin="0,7,0,7">
                                     <TextBlock x:Name="DashboardEmptyTitle" Text="No saved reports yet" FontWeight="SemiBold"/>
                                     <TextBlock x:Name="DashboardEmptyDetail" Text="Analyze a build log to start your history." Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                                    <Button Content="Configure project folder…" Click="GoToSettings" Style="{StaticResource QuietButton}"
+                                            HorizontalAlignment="Left" Margin="0,7,0,0"/>
                                 </StackPanel>
                                 <ListBox x:Name="RecentList" ItemTemplate="{StaticResource HistoryEntry}" MaxHeight="210"
                                          AutomationProperties.Name="Recent reports" SelectionChanged="HistorySelectionChanged" MouseDoubleClick="OpenHistory" KeyDown="OpenHistoryWithKeyboard"/>
@@ -248,6 +251,11 @@
                                 <Button x:Name="RunCompare" Content="Compare logs" Style="{StaticResource PrimaryButton}" IsEnabled="False" Click="CompareLogs"/>
                             </StackPanel>
                             <TextBlock x:Name="CompareHint" Text="Select the baseline and updated log." Style="{StaticResource Muted}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <DockPanel x:Name="TimelineBar" Visibility="Collapsed" Margin="0,0,0,7">
+                            <TextBlock x:Name="TimelineCount" DockPanel.Dock="Left" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                            <ComboBox x:Name="TimelinePairs" SelectionChanged="SelectTimelinePair" DisplayMemberPath="Label"
+                                      AutomationProperties.Name="Transition between saved analyses"/>
                         </DockPanel>
                         <Border x:Name="CompareMetrics" Style="{StaticResource Panel}" Padding="3" Visibility="Collapsed">
                             <Grid>
@@ -406,6 +414,9 @@
                     <DockPanel Margin="0,0,0,10">
                         <Button x:Name="OpenHistoryButton" DockPanel.Dock="Right" Content="Open report" Click="OpenSelectedHistory"
                                 Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" IsEnabled="False"/>
+                        <Button x:Name="CompareHistoryButton" DockPanel.Dock="Right" Content="Compare selected"
+                                Click="CompareSelectedReports" Margin="8,0,0,0" IsEnabled="False"
+                                ToolTipService.ShowOnDisabled="True" ToolTip="Select 2 to 8 standalone analyses with Ctrl or Shift."/>
                         <ComboBox x:Name="HistoryKindFilter" DockPanel.Dock="Right" Width="138" Margin="7,0,0,0" SelectedIndex="0"
                                   SelectionChanged="HistoryFilterChanged" AutomationProperties.Name="Filter history by report type">
                             <ComboBoxItem Content="All types"/><ComboBoxItem Content="Analysis"/><ComboBoxItem Content="Comparison"/><ComboBoxItem Content="Saved report"/>
@@ -421,12 +432,13 @@
                     </DockPanel>
                     <Border Grid.Row="1" Style="{StaticResource Panel}" Padding="12">
                         <Grid>
-                            <DataGrid x:Name="HistoryList" AutomationProperties.Name="Saved reports" SelectionChanged="HistorySelectionChanged"
+                            <DataGrid x:Name="HistoryList" SelectionMode="Extended" AutomationProperties.Name="Saved reports" SelectionChanged="HistorySelectionChanged"
                                       MouseDoubleClick="OpenHistory" KeyDown="OpenHistoryWithKeyboard" PreviewMouseRightButtonDown="SelectContextRow">
                                 <DataGrid.ContextMenu>
                                     <ContextMenu Opened="UpdateHistoryMenu">
                                         <MenuItem Header="Open report" Click="OpenSelectedHistory"/>
                                         <MenuItem Header="Copy report name" Click="CopyHistoryName"/>
+                                        <MenuItem x:Name="ContextTimeline" Header="Compare selected analyses" Click="CompareSelectedReports"/>
                                     </ContextMenu>
                                 </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
@@ -491,7 +503,7 @@
                             <StackPanel Margin="0,3,0,1">
                                 <DockPanel Margin="0,10,0,10">
                                     <ComboBox x:Name="ExportFormat" DockPanel.Dock="Right" Width="115" AutomationProperties.Name="Preferred export format">
-                                        <ComboBoxItem Content="JSON"/><ComboBoxItem Content="SARIF"/>
+                                        <ComboBoxItem Content="JSON"/><ComboBoxItem Content="SARIF"/><ComboBoxItem Content="Markdown"/>
                                     </ComboBox>
                                     <TextBlock Text="Preferred export format" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </DockPanel>

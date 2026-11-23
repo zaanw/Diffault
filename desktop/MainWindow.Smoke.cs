@@ -102,11 +102,15 @@ public partial class MainWindow
         Results.SelectedIndex = 0;
         await CaptureWorkspaceAsync(screenshots, "03-compare");
 
-        var report = comparison!.Data;
+        var report = comparison!;
         var json = Path.Combine(workingDirectory, "diffault.json");
         var sarif = Path.Combine(workingDirectory, "diffault.sarif");
-        await WriteReportAsync(report, json, sarif: false);
-        await WriteReportAsync(report, sarif, sarif: true);
+        var markdown = Path.Combine(workingDirectory, "diffault.md");
+        await WriteReportAsync(report, json, ReportFormat.Json);
+        await WriteReportAsync(report, sarif, ReportFormat.Sarif);
+        await WriteReportAsync(report, markdown, ReportFormat.Markdown);
+        Require(File.ReadAllText(markdown).Contains("## Persistent (2)") &&
+            File.ReadAllText(markdown).Contains("1 → 2"), "Markdown export failed.");
         using (var jsonDocument = JsonDocument.Parse(await File.ReadAllTextAsync(json)))
             Require(jsonDocument.RootElement.GetProperty("existing").GetArrayLength() == 2, "JSON export failed.");
         using (var sarifDocument = JsonDocument.Parse(await File.ReadAllTextAsync(sarif)))
@@ -211,8 +215,84 @@ public partial class MainWindow
             "The navigation rail did not collapse.");
         ToggleSidebar(this, new RoutedEventArgs());
 
+        await VerifyBetaFeaturesAsync(before, after, workingDirectory, screenshots);
         await VerifyLargeReportAsync(workingDirectory);
         if (screenshots is not null) await CaptureReviewScreensAsync(workingDirectory, screenshots);
+    }
+
+    private async Task VerifyBetaFeaturesAsync(string before, string after, string directory, string? screenshots)
+    {
+        var invalid = Path.Combine(directory, "binary.log");
+        await File.WriteAllBytesAsync(invalid, [0x50, 0x4b, 0x00, 0x01]);
+        var previous = analysis;
+        await AnalyzeFileAsync(invalid);
+        if (!ReferenceEquals(previous, analysis) || !Status.Text.Contains("Analysis failed"))
+            throw new InvalidOperationException("Binary input replaced the active report.");
+
+        var actual = Path.Combine(Path.GetDirectoryName(before)!, "rustc.log");
+        if (File.Exists(actual))
+        {
+            await AnalyzeFileAsync(actual);
+            if (analysis is not { Total: > 0 } || !DetectedLanguages.Text.Contains("Rust"))
+                throw new InvalidOperationException("A real rustc diagnostic was not recognized.");
+        }
+
+        if (Environment.GetEnvironmentVariable("DIFFAULT_EDITOR_PROBE") is { } editor)
+        {
+            await AnalyzeFileAsync(before);
+            var project = Directory.CreateDirectory(Path.Combine(directory, "sample project"));
+            var source = Path.Combine(project.FullName, "Main.cs");
+            await File.WriteAllTextAsync(source, "// source");
+            var result = Path.Combine(directory, "editor-result.txt");
+            Environment.SetEnvironmentVariable("DIFFAULT_EDITOR_RESULT", result);
+            preferences = preferences with { Project = project.FullName, Editor = editor };
+            foreach (var item in Results.Items.OfType<DiagnosticRow>().Where(row => row.Item.File == "Main.cs"))
+                Results.SelectedItem = item;
+            OpenSource(this, new RoutedEventArgs());
+            for (var i = 0; i < 40 && !File.Exists(result); i++) await Task.Delay(75);
+            if (!File.Exists(result) || await File.ReadAllTextAsync(result) != $"{source}:1:2")
+                throw new InvalidOperationException("The external editor did not receive the source location.");
+            preferences = preferences with { Project = null, Editor = null };
+        }
+
+        preferences = preferences with { KeepHistory = true };
+        await AnalyzeFileAsync(before);
+        await AnalyzeFileAsync(after);
+        await AnalyzeFileAsync(before);
+        Navigate(Page.History);
+        await RefreshHistoryAsync();
+        foreach (var item in HistoryList.Items.OfType<SavedReport>().Where(row => row.Entry.Kind == AnalysisKind.Analysis).Take(3))
+            HistoryList.SelectedItems.Add(item);
+        if (!CompareHistoryButton.IsEnabled)
+            throw new InvalidOperationException("Three selected saved analyses did not enable comparison.");
+        await StartTimelineAsync(SelectedAnalyses());
+        if (timeline.Length != 2 || comparison?.Fixed.Single().Item.File != "new.go")
+            throw new InvalidOperationException("The latest timeline pair did not show the expected resolved issue.");
+        await LoadTimelinePairAsync(timeline[0]);
+        if (comparison?.New.Single().Item.File != "new.go")
+            throw new InvalidOperationException("Selecting the previous pair did not update comparison results.");
+        await CaptureWorkspaceAsync(screenshots, "08-timeline");
+
+        ClickButton(SettingsNav);
+        ExportFormat.SelectedIndex = (int)ReportFormat.Markdown;
+        ClickButton(SaveSettingsButton);
+        var reopened = new MainWindow(directory);
+        try
+        {
+            if (reopened.PreferredFormat != ReportFormat.Markdown || reopened.history.List().Length < 5)
+                throw new InvalidOperationException("Settings or reports were lost on reopening the workspace.");
+        }
+        finally { reopened.Close(); }
+
+        var about = new AboutWindow(diagnostics, () => Task.FromResult<ReleaseCandidate?>(new("v0.1.0-beta.2"))) { Owner = this };
+        about.Show();
+        await about.CheckForUpdatesAsync();
+        if (!about.InstalledVersion.Text.StartsWith("v0.1.0-beta.", StringComparison.Ordinal) ||
+            !about.OpenReleaseButton.IsVisible)
+            throw new InvalidOperationException("The version or available update did not appear.");
+        about.Close();
+
+        static void ClickButton(Button button) => button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
     }
 
     private async Task VerifyLargeReportAsync(string directory)
@@ -328,5 +408,13 @@ public partial class MainWindow
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = File.Create(Path.Combine(outputDirectory, name + ".png"));
         encoder.Save(stream);
+        if (name.StartsWith("review-wide-") && (name.EndsWith("-Dark-Compare") || name.EndsWith("-Light-Analyze")))
+        {
+            var thumbnail = new TransformedBitmap(bitmap, new ScaleTransform(0.44, 0.44));
+            var preview = new JpegBitmapEncoder { QualityLevel = 67 };
+            preview.Frames.Add(BitmapFrame.Create(thumbnail));
+            using var output = File.Create(Path.Combine(outputDirectory, name + ".jpg"));
+            preview.Save(output);
+        }
     }
 }

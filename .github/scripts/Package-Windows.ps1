@@ -1,13 +1,18 @@
 param(
     [Parameter(Mandatory)][string] $PublishDirectory,
     [Parameter(Mandatory)][string] $ArchivePath,
-    [Parameter(Mandatory)][string] $Screenshots
+    [Parameter(Mandatory)][string] $Screenshots,
+    [Parameter(Mandatory)][string] $SmokeDirectory,
+    [Parameter(Mandatory)][string] $EditorProbeDirectory,
+    [Parameter(Mandatory)][string] $Version
 )
 
 $ErrorActionPreference = 'Stop'
 $PublishDirectory = (Resolve-Path -LiteralPath $PublishDirectory).Path
 $ArchivePath = [System.IO.Path]::GetFullPath($ArchivePath)
 $Screenshots = [System.IO.Path]::GetFullPath($Screenshots)
+$SmokeDirectory = (Resolve-Path -LiteralPath $SmokeDirectory).Path
+$EditorProbeDirectory = (Resolve-Path -LiteralPath $EditorProbeDirectory).Path
 $root = [System.IO.Directory]::CreateTempSubdirectory('Diffault package ').FullName
 
 function Wait-ForDiffaultWindow($Process) {
@@ -30,6 +35,11 @@ try {
     New-Item -ItemType Directory -Path $staging, $extracted, $unrelatedDirectory | Out-Null
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $ArchivePath) | Out-Null
     Copy-Item -Path (Join-Path $PublishDirectory '*') -Destination $staging -Recurse
+    Get-ChildItem -LiteralPath $staging -Filter '*.pdb' -File -Recurse | Remove-Item
+    $excluded = Get-ChildItem -LiteralPath $staging -Force -File -Recurse | Where-Object {
+        $_.Name -match '^(\.env(?:\..+)?|settings\.json)$' -or $_.Extension -in '.db', '.log', '.pem', '.key', '.pfx', '.p12'
+    }
+    if ($excluded) { throw 'Found unexpected local data or credentials in the portable build.' }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../../LICENSE') -Destination (Join-Path $staging 'LICENSE.txt')
     @'
 DIFFAULT FOR WINDOWS X64
@@ -63,6 +73,8 @@ If startup fails, check %LOCALAPPDATA%\ErrorHunt\diagnostics.log.
     Write-Host "Verified $($packagedFiles.Count) extracted files against the staged package."
 
     $executable = Join-Path $appFolder 'Diffault.exe'
+    $manifestVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($executable).ProductVersion.Split('+')[0]
+    if ($manifestVersion -ne $Version) { throw 'The packaged executable version differs from VERSION.' }
     $normal = Start-Process -FilePath $executable -WorkingDirectory $unrelatedDirectory -PassThru
     try {
         Wait-ForDiffaultWindow $normal
@@ -75,6 +87,20 @@ If startup fails, check %LOCALAPPDATA%\ErrorHunt\diagnostics.log.
         $normal.Dispose()
     }
 
+    $probeDirectory = Join-Path $root 'Editor probe'
+    Copy-Item -LiteralPath $EditorProbeDirectory -Destination $probeDirectory -Recurse
+    Copy-Item -LiteralPath (Join-Path $probeDirectory 'ErrorHunt.Checks.exe') -Destination (Join-Path $probeDirectory 'Code.exe')
+    $rustInput = Join-Path $root 'rustc-example.rs'
+    'fn main() { let _: u32 = "false"; }' | Set-Content -LiteralPath $rustInput -Encoding UTF8NoBOM
+    $rustLog = Join-Path $root 'rustc.log'
+    # Produce an actual compiler report. This source must fail to compile.
+    $compiler = Start-Process -FilePath ('rustc') -ArgumentList @('--color=always', ('"' + $rustInput + '"')) `
+        -WorkingDirectory $root -RedirectStandardError $rustLog -PassThru -Wait
+    if ($compiler.ExitCode -eq 0 -or !(Select-String -LiteralPath $rustLog -Pattern 'E0308' -Quiet)) {
+        throw 'Could not produce the Rust compiler example.'
+    }
+    $compiler.Dispose()
+
     $before = Join-Path $root 'before log.txt'
     $after = Join-Path $root 'after log.txt'
     @('Main.cs(1,2): error CS0103: missing', 'stable.go:2: undefined: stable', 'old.go:2: undefined: old') |
@@ -82,7 +108,8 @@ If startup fails, check %LOCALAPPDATA%\ErrorHunt\diagnostics.log.
     @('Main.cs(7,5): error CS0103: missing', 'Main.cs(8,5): error CS0103: missing', 'stable.go:4: undefined: stable', 'new.go:2: undefined: new') |
         Set-Content -LiteralPath $after -Encoding UTF8
     $options = @{
-        FilePath = $executable
+        FilePath = Join-Path $SmokeDirectory 'Diffault.exe'
+        Environment = @{ DIFFAULT_EDITOR_PROBE = (Join-Path $probeDirectory 'Code.exe') }
         WorkingDirectory = $unrelatedDirectory
         ArgumentList = @('--smoke-test', ('"' + $before + '"'), ('"' + $after + '"'), ('"' + $Screenshots + '"'))
         RedirectStandardError = Join-Path $root 'smoke-stderr.log'
@@ -90,7 +117,7 @@ If startup fails, check %LOCALAPPDATA%\ErrorHunt\diagnostics.log.
     }
     $smoke = Start-Process @options
     try {
-        if (!$smoke.WaitForExit(45000)) { throw 'The packaged workspace smoke test timed out.' }
+        if (!$smoke.WaitForExit(65000)) { throw 'The packaged workspace smoke test timed out.' }
         if ($smoke.ExitCode -ne 0) {
             $details = Get-Content -LiteralPath $options.RedirectStandardError -Raw
             if ($details) { Write-Host $details }
@@ -111,7 +138,10 @@ If startup fails, check %LOCALAPPDATA%\ErrorHunt\diagnostics.log.
     if (@(Get-ChildItem -LiteralPath $Screenshots -Filter 'review-*.png' -File).Count -ne 20) {
         throw 'The smoke test did not capture every page in both themes and window sizes.'
     }
-    Write-Host 'Workspace smoke test passed on the extracted package.'
+    Write-Host 'Workspace smoke test passed with the separate test executable.'
+    $digest = (Get-FileHash -LiteralPath $ArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    "$digest  $([IO.Path]::GetFileName($ArchivePath))" | Set-Content `
+        -LiteralPath (Join-Path (Split-Path -Parent $ArchivePath) 'SHA256SUMS.txt') -Encoding ascii
 } finally {
     Remove-Item -LiteralPath $root -Recurse -Force
 }

@@ -8,6 +8,13 @@ static void Require(bool condition, string description)
     if (!condition) throw new InvalidOperationException(description);
 }
 
+if (args is ["--goto", var position] && Environment.GetEnvironmentVariable("DIFFAULT_EDITOR_RESULT") is { } resultPath)
+{
+    File.WriteAllText(resultPath + ".tmp", position);
+    File.Move(resultPath + ".tmp", resultPath);
+    return;
+}
+
 if (args.Length != 1) throw new ArgumentException("Supply the path of the built Rust engine.");
 var directory = Directory.CreateTempSubdirectory("errorhunt-");
 try
@@ -99,7 +106,26 @@ try
     catch (IOException)
     {
     }
-    Console.WriteLine("Comparison, JSON, SARIF, SQLite and source path checks passed.");
+    var argsForEditor = EditorArguments.ForSource("Code.exe", source, 7, 5);
+    Require(argsForEditor.SequenceEqual(new[] { "--goto", $"{source}:7:5" }) &&
+        EditorArguments.ForSource("notepad++.exe", source, 7, null).SequenceEqual(new[] { "-n7", source }) &&
+        EditorArguments.ForSource("notepad.exe", source, 7, 5).SequenceEqual(new[] { source }) &&
+        EditorArguments.ForSource("rider64.exe", source, 7, 5).SequenceEqual(new[] { "--line", "7", "--column", "5", source }),
+        "Editor location arguments");
+    using var markdown = new StringWriter();
+    ReportMarkdown.Write(markdown, new Report([], [report.New[0] with { Message = "a|b\n<img>" }], []), "# Processed", comparison: false);
+    Require(markdown.ToString().Contains(@"a\|b \<img\>") && markdown.ToString().Contains(@"\# Processed"), "Markdown escaping");
+    using var releases = JsonDocument.Parse("""
+        [
+          {"tag_name":"v0.1.0-beta.9","draft":true,"prerelease":true,"assets":[{"name":"Diffault-v0.1.0-beta.9-win-x64.zip"}]},
+          {"tag_name":"v0.1.0-beta.2","draft":false,"prerelease":true,"html_url":"https://example.test","assets":[{"name":"Diffault-v0.1.0-beta.2-win-x64.zip"}]},
+          {"tag_name":"v0.1.0","draft":false,"prerelease":false,"assets":[{"name":"checksums.txt"}]}
+        ]
+        """);
+    Require(ReleaseCatalog.FindUpdate(releases.RootElement, "0.1.0-beta.1")?.Page.AbsoluteUri ==
+        "https://github.com/zaanw/Diffault/releases/tag/v0.1.0-beta.2" &&
+        ReleaseCatalog.FindUpdate(releases.RootElement, "0.0.9") is null, "Release filtering and fixed origin");
+    Console.WriteLine("Comparison, exports, SQLite, editor locations and release catalog checks passed.");
 }
 finally
 {

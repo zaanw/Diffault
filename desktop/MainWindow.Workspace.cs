@@ -29,7 +29,7 @@ public partial class MainWindow
     {
         sidebarCollapsed = !sidebarCollapsed;
         SidebarColumn.Width = new GridLength(sidebarCollapsed ? 50 : 152);
-        BrandName.Visibility = Visible(!sidebarCollapsed);
+        BrandName.Visibility = VersionButton.Visibility = Visible(!sidebarCollapsed);
         foreach (var button in new[] { DashboardNav, AnalyzeNav, CompareNav, HistoryNav, SettingsNav })
         {
             var content = (StackPanel)button.Content;
@@ -38,6 +38,7 @@ public partial class MainWindow
         }
         var action = sidebarCollapsed ? "Expand navigation" : "Collapse navigation";
         ToggleSidebarButton.ToolTip = action;
+        if (!sidebarCollapsed) Fade(BrandName);
         AutomationProperties.SetName(ToggleSidebarButton, action);
     }
 
@@ -92,6 +93,7 @@ public partial class MainWindow
             {
                 commands.Add(new("Export report as JSON…", "", () => ExportJson(this, new RoutedEventArgs())));
                 commands.Add(new("Export report as SARIF…", "", () => ExportSarif(this, new RoutedEventArgs())));
+                commands.Add(new("Export report as Markdown…", "", () => ExportMarkdown(this, new RoutedEventArgs())));
             }
             if (HeaderSource.IsVisible)
                 commands.Add(new("Open selected source file", "", () => OpenSource(this, new RoutedEventArgs())));
@@ -100,6 +102,9 @@ public partial class MainWindow
             commands.Add(new("Focus search", "Ctrl+F", FocusSearch));
         if (Results.SelectedItem is DiagnosticRow)
             commands.Add(new("Copy selected diagnostic", "", () => CopyDiagnostic(this, new RoutedEventArgs())));
+        if (page == Page.History && CanCompareSelectedAnalyses)
+            commands.Add(new("Compare selected saved analyses", "", () => CompareSelectedReports(this, new RoutedEventArgs())));
+        commands.Add(new("What’s new and updates", "", () => OpenAbout(this, new RoutedEventArgs())));
         return commands.ToArray();
     }
 
@@ -209,7 +214,9 @@ public partial class MainWindow
     {
         if (sender is not DataGrid grid || e.OriginalSource is not DependencyObject source) return;
         if (ItemsControl.ContainerFromElement(grid, source) is DataGridRow row)
-            grid.SelectedItem = row.Item;
+        {
+            if (!grid.SelectedItems.Contains(row.Item)) grid.SelectedItem = row.Item;
+        }
         else
             grid.SelectedItem = null;
     }
@@ -228,7 +235,8 @@ public partial class MainWindow
     {
         if (sender is not ContextMenu menu) return;
         foreach (var item in menu.Items.OfType<MenuItem>())
-            item.IsEnabled = HistoryList.SelectedItem is SavedReport && !busy;
+            item.IsEnabled = HistoryList.SelectedItems.Count == 1 && !busy;
+        ContextTimeline.IsEnabled = CanCompareSelectedAnalyses;
         Fade(menu);
     }
 

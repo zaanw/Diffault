@@ -4,6 +4,9 @@
     <StartupObject>ErrorHunt.Program</StartupObject>
     <AssemblyName>Diffault</AssemblyName>
     <Product>Diffault</Product>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../VERSION').Trim())</Version>
+    <ApplicationIcon>Assets/Diffault.ico</ApplicationIcon>
+    <DefineConstants Condition="'$(DiffaultSmoke)' == 'true'">$(DefineConstants);DIFFAULT_SMOKE</DefineConstants>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
@@ -14,6 +17,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../reports/ErrorHunt.Reports.csproj" />
+    <Resource Include="Assets/Diffault.ico" />
+    <Compile Remove="MainWindow.Smoke.cs" Condition="'$(DiffaultSmoke)' != 'true'" />
     <None Include="$(EngineExecutable)" Link="errorhunt-engine.exe"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
           Condition="'$(EngineExecutable)' != ''" />

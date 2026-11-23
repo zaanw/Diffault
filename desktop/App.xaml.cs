@@ -9,17 +9,20 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+#if DIFFAULT_SMOKE
         if (e.Args is ["--smoke-test", var before, var after, .. var options] && options.Length <= 1)
         {
             StartSmokeTest(before, after, options.FirstOrDefault());
             return;
         }
 
+#endif
         MainWindow = new MainWindow();
         MainWindow.Loaded += (_, _) => LocalDiagnostics.Default.Record("startup.ready");
         MainWindow.Show();
     }
 
+#if DIFFAULT_SMOKE
     private void StartSmokeTest(string before, string after, string? screenshots)
     {
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -52,4 +55,5 @@ public partial class App : Application
         };
         window.Show();
     }
+#endif
 }

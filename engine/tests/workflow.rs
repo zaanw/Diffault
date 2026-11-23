@@ -124,3 +124,15 @@ fn leaves_renames_and_changed_messages_unmatched() {
     assert_eq!(result.new.len(), 2);
     assert!(result.existing.is_empty());
 }
+
+#[test]
+fn detects_ansi_compiler_and_msvc_formats() {
+    let diagnostics = errorhunt_engine::parse(
+        "\x1b[1;31merror[E0308]\x1b[0m: mismatched types\n\x1b[94m -->\x1b[0m src/main.rs:1:16\nC:\\code\\main.cpp(17): fatal error C1083: Cannot open include file",
+    );
+    assert_eq!(diagnostics.len(), 2);
+    assert_eq!(diagnostics[0].code.as_deref(), Some("E0308"));
+    assert_eq!(diagnostics[0].line, Some(1));
+    assert_eq!(diagnostics[1].code.as_deref(), Some("C1083"));
+    assert_eq!(diagnostics[1].language, "cpp");
+}
