@@ -155,7 +155,7 @@ public partial class MainWindow
 
     private void OpenSource(object sender, RoutedEventArgs e)
     {
-        if (Results.SelectedItem is not DiagnosticRow { Item: { File: { } file } diagnostic }) return;
+        if (ActiveReport?.IsSample != false || Results.SelectedItem is not DiagnosticRow { Item: { File: { } file } diagnostic }) return;
         if (preferences.Project is not { } project)
         {
             Status.Text = "Choose and save a local project folder in Settings.";

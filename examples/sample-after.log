@@ -1,0 +1,14 @@
+[build] Sample checkout service / updated
+[build] Compile .NET application
+src/Checkout/Payment.cs(27,13): error CS0103: The name 'currencyCode' does not exist in the current context.
+[build] Compile Go services
+services/worker/queue.go:45:12: undefined: defaultQueue
+services/worker/queue.go:72:9: undefined: defaultQueue
+services/worker/queue.go:106:9: undefined: defaultQueue
+[build] Check TypeScript
+web/checkout.ts(20,9): warning TS6133: 'debugLabel' is declared but its value is never read.
+[build] Compile native extension
+extensions/tax/bridge.cpp(74): warning C4101: 'result_code': unreferenced local variable
+[build] Validate database migrations
+ERROR: relation "checkout_receipts" does not exist
+[build] Finished with diagnostics

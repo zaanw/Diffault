@@ -107,10 +107,8 @@
                     <StackPanel>
                         <Border Style="{StaticResource Panel}" Padding="12,10">
                             <DockPanel>
-                                <WrapPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
-                                    <Button Content="Analyze log…" Style="{StaticResource PrimaryButton}" Click="OpenLog" ToolTip="Open a build log (Ctrl+O)" Margin="0,0,6,0"/>
-                                    <Button Content="Compare builds" Click="GoToCompare"/>
-                                </WrapPanel>
+                                <Button DockPanel.Dock="Right" Content="Project settings" Style="{StaticResource QuietButton}"
+                                        Click="GoToSettings" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                 <StackPanel>
                                     <TextBlock Text="Project folder" FontWeight="SemiBold"/>
                                     <TextBlock x:Name="DashboardProject" Text="Not configured" Style="{StaticResource MutedCode}"
@@ -118,6 +116,51 @@
                                 </StackPanel>
                             </DockPanel>
                         </Border>
+
+                        <Grid x:Name="DashboardActions" Margin="0,9,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource Panel}" Margin="0,0,5,0" Padding="12">
+                                <StackPanel>
+                                    <TextBlock Text="Start a review" Style="{StaticResource SectionTitle}"/>
+                                    <TextBlock Text="Open or drop a build log to find diagnostics." Style="{StaticResource Muted}"
+                                               TextWrapping="Wrap" Margin="0,4,0,10"/>
+                                    <UniformGrid Columns="2">
+                                        <Button Content="Analyze log…" Style="{StaticResource PrimaryButton}" Click="OpenLog"
+                                                ToolTip="Open a build log (Ctrl+O)" Margin="0,0,6,6"/>
+                                        <Button Content="Paste text" Click="AnalyzeClipboard" Margin="0,0,0,6"/>
+                                        <Button Content="Compare builds" Click="GoToCompare" Margin="0,0,6,0"/>
+                                        <Button Content="Open history" Click="GoToHistory"/>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource Panel}" Margin="5,0,0,0" Padding="12">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <Button Content="Save log…" DockPanel.Dock="Right" Style="{StaticResource QuietButton}"
+                                                Click="SaveSample" MinHeight="24" Padding="6,2" Margin="7,-3,-3,0"/>
+                                        <TextBlock Text="Sample logs" Style="{StaticResource SectionTitle}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                    <TextBlock Text="Try a sample build or compare two versions. Sample runs stay out of your history."
+                                               Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,10"/>
+                                    <WrapPanel>
+                                        <Button Content="Analyze test log" Click="AnalyzeSample" Margin="0,0,6,4"/>
+                                        <Button Content="Compare samples" Click="CompareSamples" Margin="0,0,0,4"/>
+                                    </WrapPanel>
+                                    <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,5,0,0"
+                                            ClipToBounds="True" AutomationProperties.Name="Test log preview">
+                                        <ItemsControl x:Name="SamplePreview">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" ToolTip="{Binding}" Style="{StaticResource MutedCode}"
+                                                               TextTrimming="CharacterEllipsis" Margin="0,1"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
 
                         <Grid x:Name="DashboardMetrics" Margin="0,9,0,0">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -179,8 +222,6 @@
                                 <StackPanel x:Name="DashboardEmpty" Margin="0,7,0,7">
                                     <TextBlock x:Name="DashboardEmptyTitle" Text="No saved reports yet" FontWeight="SemiBold"/>
                                     <TextBlock x:Name="DashboardEmptyDetail" Text="Analyze a build log to start your history." Style="{StaticResource Muted}" Margin="0,3,0,0"/>
-                                    <Button Content="Configure project folder…" Click="GoToSettings" Style="{StaticResource QuietButton}"
-                                            HorizontalAlignment="Left" Margin="0,7,0,0"/>
                                 </StackPanel>
                                 <ListBox x:Name="RecentList" ItemTemplate="{StaticResource HistoryEntry}" MaxHeight="210"
                                          AutomationProperties.Name="Recent reports" SelectionChanged="HistorySelectionChanged" MouseDoubleClick="OpenHistory" KeyDown="OpenHistoryWithKeyboard"/>
@@ -234,7 +275,11 @@
                                     </StackPanel>
                                 </DockPanel>
                             </Border>
-                            <Path Grid.Column="1" Style="{StaticResource Icon}" Data="{StaticResource ArrowIcon}" Stroke="{DynamicResource AccentTextBrush}"/>
+                            <Button x:Name="SwapInputs" Grid.Column="1" Style="{StaticResource QuietButton}" Click="SwapCompareInputs"
+                                    Width="29" Padding="4" IsEnabled="False" VerticalAlignment="Center"
+                                    ToolTip="Swap Before and After" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="Swap Before and After">
+                                <Path Style="{StaticResource Icon}" Data="{StaticResource CompareIcon}" Stroke="{DynamicResource AccentTextBrush}"/>
+                            </Button>
                             <Border Grid.Column="2" Style="{StaticResource DropCard}" Padding="11,8" Drop="DropAfter">
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Content="Browse" Click="PickAfter" VerticalAlignment="Center" Margin="8,0,0,0"/>
@@ -262,6 +307,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                     <ColumnDefinition x:Name="FrequencyColumn" Width="*"/>
+                                    <ColumnDefinition x:Name="LessFrequencyColumn" Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Button x:Name="FixedButton" Style="{StaticResource DiffTab}" Click="ShowFixed" AutomationProperties.Name="Resolved issues">
                                     <StackPanel Orientation="Horizontal">
@@ -286,9 +332,15 @@
                                 </Button>
                                 <Button x:Name="MoreFrequentButton" Grid.Column="3" Style="{StaticResource DiffTab}" Click="ShowMoreFrequent" AutomationProperties.Name="More frequent issues">
                                     <StackPanel Orientation="Horizontal">
-                                        <Path Style="{StaticResource Icon}" Data="{StaticResource TrendIcon}" Stroke="{DynamicResource WarningBrush}" Width="13" Height="13"/>
-                                        <TextBlock Text="More frequent" Margin="6,0,7,0"/>
+                                        <TextBlock Text="More frequent" Margin="0,0,7,0"/>
                                         <TextBlock x:Name="MoreFrequentCount" Foreground="{DynamicResource WarningBrush}" FontFamily="{StaticResource CodeFont}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="LessFrequentButton" Grid.Column="4" Style="{StaticResource DiffTab}"
+                                        Click="ShowLessFrequent" AutomationProperties.Name="Less frequent issues">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Less frequent" Margin="0,0,7,0"/>
+                                        <TextBlock x:Name="LessFrequentCount" Foreground="{DynamicResource SuccessBrush}" FontFamily="{StaticResource CodeFont}"/>
                                     </StackPanel>
                                 </Button>
                             </Grid>
@@ -298,6 +350,7 @@
                     <Grid x:Name="Filters" Grid.Row="1" Margin="0,8,0,7" Visibility="Collapsed">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="1.6*"/><ColumnDefinition Width="100"/><ColumnDefinition Width="109"/><ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBox x:Name="Search" AutomationProperties.Name="Search diagnostics" ToolTip="Search file, code or message"
                                  TextChanged="FilterChanged" VerticalContentAlignment="Center" Margin="0,0,7,0" Padding="31,6,9,6"/>
@@ -308,6 +361,10 @@
                         <ComboBox x:Name="SeverityFilter" Grid.Column="1" AutomationProperties.Name="Filter by severity" SelectionChanged="FilterChanged" Margin="0,0,7,0"/>
                         <ComboBox x:Name="LanguageFilter" Grid.Column="2" AutomationProperties.Name="Filter by language" SelectionChanged="FilterChanged" Margin="0,0,7,0"/>
                         <ComboBox x:Name="FileFilter" Grid.Column="3" AutomationProperties.Name="Filter by file" SelectionChanged="FilterChanged" ToolTip="Filter diagnostics by file"/>
+                        <CheckBox x:Name="RepeatedOnly" Grid.Column="4" Content="Repeated" Checked="FilterChanged" Unchecked="FilterChanged"
+                                  ToolTip="Show diagnostics that occurred more than once in either build" VerticalAlignment="Center" Margin="9,0,5,0"/>
+                        <Button x:Name="ResetFilterButton" Grid.Column="5" Content="Reset" Click="ClearDiagnosticFilters"
+                                Style="{StaticResource QuietButton}" ToolTip="Clear search and diagnostic filters" IsEnabled="False"/>
                     </Grid>
 
                     <Grid x:Name="DiagnosticPanes" Grid.Row="2" SizeChanged="DiagnosticPanesResized">
@@ -358,6 +415,8 @@
                                     <TextBlock x:Name="DiagnosticEmptyTitle" Text="No log loaded" FontSize="16" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"/>
                                     <TextBlock x:Name="DiagnosticEmptyBody" Text="Drop a file above to inspect its diagnostics." Style="{StaticResource Muted}"
                                                TextAlignment="Center" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                    <Button x:Name="DiagnosticSampleButton" Click="RunEmptySample" Style="{StaticResource QuietButton}"
+                                            HorizontalAlignment="Center" Margin="0,8,0,0"/>
                                 </StackPanel>
                             </Grid>
                         </Border>

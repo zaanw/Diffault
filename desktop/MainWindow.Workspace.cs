@@ -84,11 +84,12 @@ public partial class MainWindow
         if (!busy)
         {
             commands.Insert(0, new("Open build log…", "Ctrl+O", () => OpenLog(this, new RoutedEventArgs())));
-            commands.Add(new("Analyze clipboard text", "", () =>
-            {
-                Navigate(Page.Analyze);
-                AnalyzeClipboard(this, new RoutedEventArgs());
-            }));
+            commands.Add(new("Analyze clipboard text", "", () => AnalyzeClipboard(this, new RoutedEventArgs())));
+            commands.Add(new("Analyze the test log", "", () => AnalyzeSample(this, new RoutedEventArgs())));
+            commands.Add(new("Compare sample builds", "", () => CompareSamples(this, new RoutedEventArgs())));
+            commands.Add(new("Save the test log…", "", () => SaveSample(this, new RoutedEventArgs())));
+            if (ResetFilterButton.IsVisible && ResetFilterButton.IsEnabled)
+                commands.Add(new("Reset diagnostic filters", "", () => ClearDiagnosticFilters(this, new RoutedEventArgs())));
             if (ActiveReport is not null)
             {
                 commands.Add(new("Export report as JSON…", "", () => ExportJson(this, new RoutedEventArgs())));

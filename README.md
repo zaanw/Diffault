@@ -14,9 +14,9 @@ Screenshots captured from the Windows beta using sample build logs.
 
 The Windows x64 build contains the WPF application, Rust engine, .NET runtime and SQLite. Download the versioned portable ZIP from [GitHub Releases](https://github.com/zaanw/Diffault/releases), choose **Extract All**, then run `Diffault.exe` inside the extracted `Diffault` folder. Keep its companion files together. The package works offline on supported Windows x64 systems with normal user permissions.
 
-- **Dashboard** shows the configured project, latest analysis, build delta, and recent reports.
-- In **Compare**, select or drop logs in **Before** and **After**, then click **Compare logs**. Select **Resolved**, **New**, **Persistent**, or **More frequent** to inspect each group.
-- In **Analyze**, open a log, drop it, or choose **Paste from clipboard**. Use the filters or group by source file. Select a row to open the resizable inspector with syntax-highlighted, numbered excerpt lines. **Copy original** copies the complete diagnostic text even when the preview is limited.
+- **Dashboard** shows the configured project, latest analysis, build delta, and recent reports. Open a log, paste text, or try the built-in sample logs directly from this page.
+- In **Compare**, select or drop logs in **Before** and **After**, then click **Compare logs**. Select **Resolved**, **New**, **Persistent**, **More frequent**, or **Less frequent** to inspect each group. Use the button between the input panes to swap two selected files.
+- In **Analyze**, open a log, drop it, or choose **Paste from clipboard**. Filter by severity, language, file or repeated diagnostics, and group the table by source file. Select a row to open the resizable inspector with syntax-highlighted, numbered excerpt lines. **Copy original** copies the complete diagnostic text even when the preview is limited.
 - **History** supports column sorting, search, filtering by type, and opening saved reports. Ctrl-select two to eight saved standalone analyses and click **Compare selected** to inspect consecutive pairs in chronological order. Existing history stays in `%LOCALAPPDATA%\ErrorHunt\history.db`. Choose a local project folder and an editor in **Settings** to enable **Open source**.
 
 Press **Ctrl+K** to search commands and pages, **Ctrl+O** to open a log, **Ctrl+F** to focus the current search, or **Ctrl+1** through **Ctrl+5** to switch pages. The diagnostic table also supports **Ctrl+C** to copy the selected diagnostic. The toolbar exports the current report to Markdown, JSON or SARIF. A timeline export contains the currently selected pair.
@@ -28,6 +28,10 @@ Use **About Diffault** from the sidebar version button or the command palette to
 The engine supports common formats for C, C++, C#, Go, Java, Lua, PHP, Python, Rust, SQL, Swift and TypeScript. Log files can be UTF-8 (with or without BOM) or BOM-marked UTF-16. Invalid byte sequences are replaced. Obvious binary files are rejected. Colored compiler output and MSVC line diagnostics are supported. The engine accepts files up to 64 MiB per log and displays positions only when captured from the log.
 
 Duplicates are grouped by language, severity, normalized path, code and message whitespace. The report shows a count and retains the first displayed source location for each group. **Existing** also shows the count from the earlier log. Select **More frequent** to find issues that appeared more times in the second build. The offline viewer offers the same filter and displays counts as `before → after`. Comparisons ignore changes to line and column. A file rename or wording change can appear as **Fixed** plus **New** because the engine cannot establish that they refer to the same diagnostic. Standalone scans use the **New** group so scans and comparisons share an export format.
+
+## Try a sample build
+
+In **Dashboard → Sample logs**, choose **Analyze test log**, **Compare samples**, or **Save log…**. Built-in sample runs leave your history and dashboard statistics unchanged. You can also download [sample-after.log](examples/sample-after.log) and [sample-before.log](examples/sample-before.log) and open them normally.
 
 ## Build the Windows x64 app
 

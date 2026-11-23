@@ -88,6 +88,10 @@ public partial class MainWindow
         SetCompareFile(after, before: false);
         Require(RunCompare.IsEnabled && BeforeFile.Text == Path.GetFileName(before) && AfterFile.Text == Path.GetFileName(after),
             "Compare file selection is incorrect.");
+        Click(SwapInputs);
+        Require(beforePath == after && afterPath == before && BeforeFile.Text == Path.GetFileName(after),
+            "Swapping inputs did not reverse their order.");
+        Click(SwapInputs);
         await CompareFilesAsync(before, after, "compare");
         Require(comparison?.Data is { Fixed.Length: 1, New.Length: 1, Existing.Length: 2 } && Results.Items.Count == 1 &&
             Results.Items[0] is DiagnosticRow { Status: "New" }, $"Comparison failed. {Status.Text}");
@@ -214,6 +218,37 @@ public partial class MainWindow
         Require(SidebarColumn.Width.Value < 60 && BrandName.Visibility == Visibility.Collapsed,
             "The navigation rail did not collapse.");
         ToggleSidebar(this, new RoutedEventArgs());
+
+        var savedCount = history.List().Length;
+        var realOverview = latestOverview;
+        var realComparison = latestComparison;
+        Require(SamplePreview.Items.Count == 3, "Native sample preview did not load.");
+
+        await RunSampleAsync(compare: false);
+        Require(analysis is { IsSample: true, Total: 5 } && Results.Items.Count == 5, "Built-in log analysis failed.");
+        RepeatedOnly.IsChecked = true;
+        filterTimer.Stop();
+        await ApplyFiltersAsync();
+        Require(Results.Items.Count == 1 && Results.Items[0] is DiagnosticRow { Item.Count: 3, Item.Language: "go" },
+            "The repeated diagnostics filter is incorrect.");
+        Click(ResetFilterButton);
+        Require(Results.Items.Count == 5 && RepeatedOnly.IsChecked == false && !ResetFilterButton.IsEnabled,
+            "Reset did not clear the diagnostic filters.");
+        await CaptureWorkspaceAsync(screenshots, "09-sample-analysis");
+
+        await RunSampleAsync(compare: true);
+        Require(comparison is { IsSample: true, Fixed.Length: 1, New.Length: 2, Existing.Length: 3, MoreFrequent.Length: 1, LessFrequent.Length: 1 }
+            && BeforeFile.Text == SampleBefore && AfterFile.Text == SampleAfter, "Built-in comparison failed.");
+        Click(LessFrequentButton);
+        Require(Results.Items.Count == 1 && Results.Items[0] is DiagnosticRow { Item.Count: 1, Item.PreviousCount: 3 },
+            "The lower frequency filter did not show the decrease.");
+        RepeatedOnly.IsChecked = true;
+        filterTimer.Stop();
+        await ApplyFiltersAsync();
+        Require(Results.Items.Count == 1, "The repeated filter excluded a diagnostic repeated in the baseline.");
+        Require(history.List().Length == savedCount && ReferenceEquals(realOverview, latestOverview)
+            && ReferenceEquals(realComparison, latestComparison), "Sample runs affected the history or dashboard totals.");
+        await CaptureWorkspaceAsync(screenshots, "10-sample-compare");
 
         await VerifyBetaFeaturesAsync(before, after, workingDirectory, screenshots);
         await VerifyLargeReportAsync(workingDirectory);

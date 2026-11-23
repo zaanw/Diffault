@@ -33,6 +33,7 @@ public partial class MainWindow : Window
     {
         diagnostics = logger ?? new LocalDiagnostics(Path.Combine(dataDirectory, "diagnostics.log"));
         InitializeComponent();
+        LoadSamplePreview();
         VersionButton.Content = $"v{AboutWindow.Version}";
         history = new History(Path.Combine(dataDirectory, "history.db"));
         preferencesPath = Path.Combine(dataDirectory, "settings.json");
@@ -157,6 +158,8 @@ public partial class MainWindow : Window
         BusyProgress.IsIndeterminate = value && SystemParameters.ClientAreaAnimation;
         BusyProgress.Value = value ? 100 : 0;
         BusyStatus.Visibility = Visible(value);
+        DashboardActions.IsEnabled = !value;
+        DiagnosticSampleButton.IsEnabled = !value;
         AnalyzeActions.IsEnabled = !value;
         CompareActions.IsEnabled = !value;
         UpdateHistoryActions();

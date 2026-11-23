@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="../reports/ErrorHunt.Reports.csproj" />
     <Resource Include="Assets/Diffault.ico" />
+    <EmbeddedResource Include="../examples/sample-*.log" LogicalName="Diffault.Samples.%(Filename)%(Extension)" />
     <Compile Remove="MainWindow.Smoke.cs" Condition="'$(DiffaultSmoke)' != 'true'" />
     <None Include="$(EngineExecutable)" Link="errorhunt-engine.exe"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"

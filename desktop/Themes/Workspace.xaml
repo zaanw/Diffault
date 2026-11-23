@@ -10,7 +10,6 @@
     <Geometry x:Key="CompareIcon">M 3,8 H 20 M 16,4 L 20,8 L 16,12 M 21,16 H 4 M 8,12 L 4,16 L 8,20</Geometry>
     <Geometry x:Key="HistoryIcon">M 4,8 A 8,8 0 1 1 4,16 M 3,3 V 9 H 9 M 12,7 V 12 L 16,14</Geometry>
     <Geometry x:Key="SettingsIcon">M 4,5 H 20 M 4,12 H 20 M 4,19 H 20 M 8,3 V 7 M 16,10 V 14 M 10,17 V 21</Geometry>
-    <Geometry x:Key="ArrowIcon">M 4,12 H 20 M 14,6 L 20,12 L 14,18</Geometry>
     <Geometry x:Key="UploadIcon">M 4,15 V 20 H 20 V 15 M 12,16 V 4 M 7,9 L 12,4 L 17,9</Geometry>
     <Geometry x:Key="SearchIcon">M 15,10 A 6,6 0 1 1 3,10 A 6,6 0 1 1 15,10 M 14,15 L 20,21</Geometry>
     <Geometry x:Key="CloseIcon">M 6,6 L 18,18 M 18,6 L 6,18</Geometry>
@@ -18,7 +17,6 @@
     <Geometry x:Key="FixedIcon">M 5,12 L 10,17 L 20,7</Geometry>
     <Geometry x:Key="NewIcon">M 12,4 V 20 M 4,12 H 20</Geometry>
     <Geometry x:Key="ExistingIcon">M 4,9 H 20 M 4,15 H 20</Geometry>
-    <Geometry x:Key="TrendIcon">M 4,18 L 10,12 L 14,15 L 20,7 M 14,7 H 20 V 13</Geometry>
 
     <Style x:Key="Icon" TargetType="Path">
         <Setter Property="Width" Value="16"/>

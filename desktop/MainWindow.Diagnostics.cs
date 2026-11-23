@@ -10,7 +10,7 @@ namespace ErrorHunt;
 
 public partial class MainWindow
 {
-    private enum ComparisonCategory { Fixed, New, Existing, MoreFrequent }
+    private enum ComparisonCategory { Fixed, New, Existing, MoreFrequent, LessFrequent }
 
     private sealed class DiagnosticRow(Diagnostic item, string status)
     {
@@ -34,15 +34,17 @@ public partial class MainWindow
 
     private sealed class WorkspaceReport
     {
-        public WorkspaceReport(Report data, AnalysisKind kind, string label)
+        public WorkspaceReport(Report data, AnalysisKind kind, string label, bool sample = false)
         {
             Data = data;
             Kind = kind;
             Label = label;
+            IsSample = sample;
             Fixed = data.Fixed.Select(item => new DiagnosticRow(item, "Resolved")).ToArray();
             New = data.New.Select(item => new DiagnosticRow(item, "New")).ToArray();
             Existing = data.Existing.Select(item => new DiagnosticRow(item, "Persistent")).ToArray();
             MoreFrequent = Existing.Where(row => row.Item.Count > row.Item.PreviousCount).ToArray();
+            LessFrequent = Existing.Where(row => row.Item.Count < row.Item.PreviousCount).ToArray();
             Rows = Fixed.Length == 0 && Existing.Length == 0 ? New
                 : kind == AnalysisKind.Comparison ? [.. Fixed, .. New, .. Existing] : [.. New, .. Existing, .. Fixed];
             Overview = ReportOverview.Summarize(label, data);
@@ -54,10 +56,12 @@ public partial class MainWindow
         public Report Data { get; }
         public AnalysisKind Kind { get; }
         public string Label { get; }
+        public bool IsSample { get; }
         public DiagnosticRow[] Fixed { get; }
         public DiagnosticRow[] New { get; }
         public DiagnosticRow[] Existing { get; }
         public DiagnosticRow[] MoreFrequent { get; }
+        public DiagnosticRow[] LessFrequent { get; }
         public DiagnosticRow[] Rows { get; }
         public ReportOverview Overview { get; }
         public int Total => Overview.Total;
@@ -124,7 +128,11 @@ public partial class MainWindow
         try
         {
             if (Clipboard.ContainsText())
-                await RunAsync("stdin", [], "Clipboard", AnalysisKind.Analysis, Clipboard.GetText());
+            {
+                var text = Clipboard.GetText();
+                Navigate(Page.Analyze);
+                await RunAsync("stdin", [], "Clipboard", AnalysisKind.Analysis, text);
+            }
             else
                 Status.Text = "The clipboard contains no text.";
         }
@@ -158,8 +166,16 @@ public partial class MainWindow
         AfterFile.Text = Path.GetFileName(afterPath) ?? "Drop the updated log";
         AfterFile.ToolTip = afterPath;
         var selected = beforePath is not null && afterPath is not null;
-        RunCompare.IsEnabled = selected;
+        RunCompare.IsEnabled = SwapInputs.IsEnabled = selected;
         CompareHint.Text = selected ? "Ready to compare." : "Select the baseline and updated log.";
+    }
+
+    private void SwapCompareInputs(object sender, RoutedEventArgs e)
+    {
+        if (busy || beforePath is null || afterPath is null) return;
+        (beforePath, afterPath) = (afterPath, beforePath);
+        ShowFiles();
+        Status.Text = "Inputs swapped. Select Compare logs to run the new comparison.";
     }
 
     private async void CompareLogs(object sender, RoutedEventArgs e)
@@ -227,26 +243,35 @@ public partial class MainWindow
         }
     }
 
-    private async Task RunAsync(string command, string[] files, string label, AnalysisKind kind, string? text = null)
+    private async Task RunAsync(string command, string[] files, string label, AnalysisKind kind,
+        string? text = null, string? afterText = null, bool sample = false)
     {
         if (busy) return;
-        var keepHistory = preferences.KeepHistory;
+        var keepHistory = preferences.KeepHistory && !sample;
         SetBusy(true, kind == AnalysisKind.Comparison ? "Comparing" : "Analyzing");
         Status.Text = "Reading diagnostics…";
         try
         {
             var snapshot = await Task.Run(async () => new WorkspaceReport(
-                await RunEngine(command, files, text).ConfigureAwait(false), kind, label));
+                await RunEngine(command, files, text, afterText: afterText).ConfigureAwait(false), kind, label, sample));
             if (kind == AnalysisKind.Comparison)
             {
                 ClearTimeline();
-                comparison = latestComparison = snapshot;
+                comparison = snapshot;
+                if (sample)
+                {
+                    beforePath = afterPath = null;
+                    ShowFiles();
+                    BeforeFile.Text = SampleBefore;
+                    AfterFile.Text = SampleAfter;
+                }
+                else latestComparison = snapshot;
                 category = ComparisonCategory.New;
             }
             else
             {
                 analysis = snapshot;
-                latestOverview = snapshot.Overview;
+                if (!sample) latestOverview = snapshot.Overview;
             }
             UpdateDashboard();
             RefreshDiagnostics();
@@ -266,7 +291,7 @@ public partial class MainWindow
             }
             else
             {
-                Status.Text = $"Analysis complete · {label}";
+                Status.Text = sample ? "Sample ready. Open your own log whenever you’re ready." : $"Analysis complete · {label}";
             }
             if (kind == AnalysisKind.Analysis && snapshot.Total == 0)
                 Status.Text = "No diagnostics matched a supported log format.";
@@ -314,9 +339,10 @@ public partial class MainWindow
             NewCount.Text = snapshot.New.Length.ToString("N0");
             ExistingCount.Text = snapshot.Existing.Length.ToString("N0");
             MoreFrequentCount.Text = snapshot.MoreFrequent.Length.ToString("N0");
+            LessFrequentCount.Text = snapshot.LessFrequent.Length.ToString("N0");
             var hasFrequencies = snapshot.Existing.Any(row => row.Item.PreviousCount is not null);
-            MoreFrequentButton.Visibility = Visible(hasFrequencies);
-            FrequencyColumn.Width = hasFrequencies ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+            MoreFrequentButton.Visibility = LessFrequentButton.Visibility = Visible(hasFrequencies);
+            FrequencyColumn.Width = LessFrequencyColumn.Width = hasFrequencies ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
             CompareHint.Text = snapshot.Label;
         }
         UpdateReportActions();
@@ -327,6 +353,8 @@ public partial class MainWindow
     {
         updatingFilters = true;
         Search.Clear();
+        RepeatedOnly.IsChecked = false;
+        ResetFilterButton.IsEnabled = false;
         SearchHint.Visibility = Visibility.Visible;
         FillFilter(SeverityFilter, snapshot?.Severities);
         FillFilter(LanguageFilter, snapshot?.Languages);
@@ -345,9 +373,17 @@ public partial class MainWindow
     {
         if (!initialized || updatingFilters) return;
         SearchHint.Visibility = Visible(Search.Text.Length == 0);
+        ResetFilterButton.IsEnabled = Search.Text.Length > 0 || SeverityFilter.SelectedIndex > 0 ||
+            LanguageFilter.SelectedIndex > 0 || FileFilter.SelectedIndex > 0 || RepeatedOnly.IsChecked == true;
         filterRevision++;
         filterTimer.Stop();
         filterTimer.Start();
+    }
+
+    private void ClearDiagnosticFilters(object sender, RoutedEventArgs e)
+    {
+        ResetFilters(ActiveReport);
+        FilterNow();
     }
 
     private void FilterNow()
@@ -372,19 +408,22 @@ public partial class MainWindow
             ComparisonCategory.New => snapshot.New,
             ComparisonCategory.Existing => snapshot.Existing,
             ComparisonCategory.MoreFrequent => snapshot.MoreFrequent,
+            ComparisonCategory.LessFrequent => snapshot.LessFrequent,
             _ => snapshot.Rows
         } : snapshot.Rows;
         var text = Search.Text.Trim();
         var severity = (SeverityFilter.SelectedItem as FilterOption)?.Value;
         var language = (LanguageFilter.SelectedItem as FilterOption)?.Value;
         var file = (FileFilter.SelectedItem as FilterOption)?.Value;
-        var result = text.Length == 0 && severity is null && language is null && file is null
+        var repeats = RepeatedOnly.IsChecked == true;
+        var result = text.Length == 0 && severity is null && language is null && file is null && !repeats
             ? rows
-            : await Task.Run(() => rows.Where(row => Matches(row.Item, text, severity, language, file)).ToArray());
+            : await Task.Run(() => rows.Where(row => Matches(row.Item, text, severity, language, file, repeats)).ToArray());
         if (revision == filterRevision) SetDisplayedRows(result, rows.Length);
     }
 
-    private static bool Matches(Diagnostic item, string query, string? severity, string? language, string? file) =>
+    private static bool Matches(Diagnostic item, string query, string? severity, string? language, string? file, bool repeats) =>
+        (!repeats || item.Count > 1 || item.PreviousCount is > 1) &&
         (severity is null || StringComparer.OrdinalIgnoreCase.Equals(severity, item.Severity)) &&
         (language is null || StringComparer.OrdinalIgnoreCase.Equals(language, item.Language)) &&
         (file is null || StringComparer.Ordinal.Equals(file, item.File)) &&
@@ -405,6 +444,8 @@ public partial class MainWindow
         if (rows.Length > 0) return;
 
         var hasReport = ActiveReport is not null;
+        DiagnosticSampleButton.Visibility = Visible(!hasReport && page is (Page.Analyze or Page.Compare));
+        DiagnosticSampleButton.Content = page == Page.Compare ? "Compare samples" : "Analyze test log";
         DiagnosticEmptyTitle.Text = !hasReport ? (page == Page.Compare ? "Ready to compare two logs" : "No log loaded")
             : total > 0 ? "No matching diagnostics" : page == Page.Compare ? $"No {CategoryLabel(category).ToLowerInvariant()} diagnostics"
             : "No diagnostics found";
@@ -420,6 +461,7 @@ public partial class MainWindow
             ComparisonCategory.Fixed => "Resolved",
             ComparisonCategory.Existing => "Persistent",
             ComparisonCategory.MoreFrequent => "More frequent",
+            ComparisonCategory.LessFrequent => "Less frequent",
             _ => selected.ToString()
         };
 
@@ -437,6 +479,7 @@ public partial class MainWindow
         NewButton.Tag = Active(category == ComparisonCategory.New);
         ExistingButton.Tag = Active(category == ComparisonCategory.Existing);
         MoreFrequentButton.Tag = Active(category == ComparisonCategory.MoreFrequent);
+        LessFrequentButton.Tag = Active(category == ComparisonCategory.LessFrequent);
     }
 
     private void ShowFixed(object sender, RoutedEventArgs e) => SelectCategory(ComparisonCategory.Fixed, FixedButton);
@@ -444,6 +487,8 @@ public partial class MainWindow
     private void ShowExisting(object sender, RoutedEventArgs e) => SelectCategory(ComparisonCategory.Existing, ExistingButton);
     private void ShowMoreFrequent(object sender, RoutedEventArgs e) =>
         SelectCategory(ComparisonCategory.MoreFrequent, MoreFrequentButton);
+    private void ShowLessFrequent(object sender, RoutedEventArgs e) =>
+        SelectCategory(ComparisonCategory.LessFrequent, LessFrequentButton);
 
     private void SelectDiagnostic(object sender, SelectionChangedEventArgs e)
     {
@@ -474,7 +519,7 @@ public partial class MainWindow
 
     private void UpdateReportActions()
     {
-        var canOpenSource = !string.IsNullOrWhiteSpace(preferences.Project)
+        var canOpenSource = ActiveReport is { IsSample: false } && !string.IsNullOrWhiteSpace(preferences.Project)
             && Results.SelectedItem is DiagnosticRow { Item.File.Length: > 0 };
         HeaderActions.Visibility = Visible(ActiveReport is not null);
         HeaderSource.Visibility = Visible(canOpenSource);
@@ -486,7 +531,7 @@ public partial class MainWindow
 
     private sealed record DiagnosticPair(Diagnostic[] Before, Diagnostic[] After);
 
-    private static async Task<Report> RunEngine(string command, string[] files, string? text, DiagnosticPair? pair = null)
+    private static async Task<Report> RunEngine(string command, string[] files, string? text, DiagnosticPair? pair = null, string? afterText = null)
     {
         foreach (var file in files)
         {
@@ -511,7 +556,7 @@ public partial class MainWindow
         start.ArgumentList.Add(command);
         foreach (var file in files) start.ArgumentList.Add(file);
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Unable to start the engine.");
-        var output = ReadEngineOutputAsync(process.StandardOutput.BaseStream, command is "compare" or "compare-reports" or "compare-stdin");
+        var output = ReadEngineOutputAsync(process.StandardOutput.BaseStream, afterText is not null || command is "compare" or "compare-reports" or "compare-stdin");
         var errors = process.StandardError.BaseStream.CopyToAsync(Stream.Null);
         if (start.RedirectStandardInput)
         {
@@ -519,7 +564,7 @@ public partial class MainWindow
             {
                 var input = process.StandardInput.BaseStream;
                 if (pair is not null) await JsonSerializer.SerializeAsync(input, pair, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-                else await JsonSerializer.SerializeAsync(input, new { before = text });
+                else await JsonSerializer.SerializeAsync(input, new { before = text, after = afterText });
             }
             catch (IOException) { /* The engine may close its input when the request exceeds its limit. */ }
             finally { process.StandardInput.Close(); }
